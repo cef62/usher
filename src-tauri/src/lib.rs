@@ -20,20 +20,27 @@ use tauri::Manager;
 /// Managed only when the engine thread was spawned.
 struct EngineStarted;
 
-fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    log::info!("usher {} starting", app.package_info().version);
-    let dir = app.path().app_data_dir();
-    // a second copy (login item beside a running usher, or a dev build) leaves before it registers anything
-    match &dir {
+/// A second copy (login item beside a running usher, or a dev build) leaves before it registers anything. The relaunch
+/// after an update waits for the old process to release the lock, then consumes the restart mark.
+fn take_instance(dir: &Result<std::path::PathBuf, tauri::Error>) {
+    match dir {
         Ok(dir) => {
-            if !instance::hold_instance_lock(dir) {
+            let wait = instance::lock_wait(instance::restart_mark_fresh(dir));
+            if !instance::hold_instance_lock(dir, wait) {
                 log::warn!("another usher is running; this one exits");
                 std::process::exit(0);
             }
+            instance::take_restart_mark(dir);
             log::debug!("instance lock held in {}", dir.display());
         }
         Err(e) => log::warn!("no app data dir, instance lock skipped ({e})"),
     }
+}
+
+fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    log::info!("usher {} starting", app.package_info().version);
+    let dir = app.path().app_data_dir();
+    take_instance(&dir);
     let (handle, rx) = EngineHandle::new();
     app.manage(handle.clone());
     app.manage(shell::LastView(Mutex::new(None)));
