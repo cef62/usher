@@ -1,6 +1,6 @@
 # usher
 
-usher is a macOS menu-bar app. It keeps the default output and input audio devices on the owner's preferred device: the highest-ranked device in a priority list that is currently connected.
+usher is a macOS menu-bar app. It keeps the default output and input audio devices on your preferred device: the highest-ranked device in a priority list that is currently connected.
 
 Status: in development, no release yet.
 

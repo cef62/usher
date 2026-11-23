@@ -31,6 +31,16 @@ test("format joins args and shows errors and objects readably", () => {
   expect(format([cyclic])).toBe("[object Object]");
 });
 
+test("format adds name and message when the stack has frames only (WebKit)", () => {
+  const e = new Error("boom");
+  e.stack = "f@http://x:1:1\ng@http://x:2:2";
+  expect(format([e])).toBe("Error: boom\nf@http://x:1:1\ng@http://x:2:2");
+  e.stack = undefined;
+  expect(format([e])).toBe("Error: boom");
+  e.stack = "";
+  expect(format([e])).toBe("Error: boom");
+});
+
 test("forwardConsole maps each method to its level and still prints", () => {
   const { fake, sent, printed } = setup();
   fake.log("l");

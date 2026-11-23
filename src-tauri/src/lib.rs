@@ -20,12 +20,23 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => log::warn!("no app data dir, instance lock skipped ({e})"),
     }
     if let Err(e) = tray::build(app.handle()) {
-        log::warn!("no menu-bar icon ({e})");
+        // an agent app without a tray has no UI and no way to quit
+        log::error!("no menu-bar icon ({e})");
+        std::process::exit(1);
     }
     Ok(())
 }
 
+fn log_panics() {
+    let prev = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        log::error!("panic: {info}");
+        prev(info);
+    }));
+}
+
 pub fn run() {
+    log_panics();
     let mut app = tauri::Builder::default()
         .plugin(logging::plugin())
         .setup(setup)

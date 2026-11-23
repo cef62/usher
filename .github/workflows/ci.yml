@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
-  # release.yml starts it on the version PR, whose pull_request runs fail at startup (#25).
+  # M5's release workflow will dispatch this job on the version PR.
   workflow_dispatch:
 
 concurrency:

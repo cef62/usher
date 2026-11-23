@@ -47,6 +47,11 @@ test("lists untracked files and skips gitignored ones", () => {
     const files = listFiles(dir);
     expect(files).toContain("src/new.rs");
     expect(files).not.toContain("target/big.rs");
+    writeFileSync(join(dir, "src/gone.rs"), "x\n");
+    execFileSync("git", ["add", "src/gone.rs"], { cwd: dir });
+    execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"], { cwd: dir });
+    rmSync(join(dir, "src/gone.rs"));
+    expect(listFiles(dir)).not.toContain("src/gone.rs");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

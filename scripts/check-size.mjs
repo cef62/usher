@@ -1,7 +1,7 @@
 // Fails when a .rs/.ts/.tsx file passes LIMIT lines. Test code does not count.
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const LIMIT = 300;
@@ -35,7 +35,7 @@ export function listFiles(cwd) {
     encoding: 'utf8',
   })
     .split('\n')
-    .filter(Boolean);
+    .filter((p) => p && existsSync(join(cwd, p)));
 }
 
 const invokedDirectly =
