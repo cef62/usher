@@ -1,35 +1,41 @@
 #![forbid(unsafe_code)]
 
 mod instance;
+mod logging;
 mod tray;
 
 use tauri::Manager;
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    // first: a second copy (login item beside a running usher, or a dev build) leaves before it registers anything
-    if let Ok(dir) = app.path().app_data_dir()
-        && !instance::hold_instance_lock(&dir)
-    {
-        eprintln!("usher: another usher is running; this one exits");
-        std::process::exit(0);
+    log::info!("usher {} starting", app.package_info().version);
+    // a second copy (login item beside a running usher, or a dev build) leaves before it registers anything
+    match app.path().app_data_dir() {
+        Ok(dir) => {
+            if !instance::hold_instance_lock(&dir) {
+                log::warn!("another usher is running; this one exits");
+                std::process::exit(0);
+            }
+            log::debug!("instance lock held in {}", dir.display());
+        }
+        Err(e) => log::warn!("no app data dir, instance lock skipped ({e})"),
     }
     if let Err(e) = tray::build(app.handle()) {
-        eprintln!("usher: no menu-bar icon ({e})");
+        log::warn!("no menu-bar icon ({e})");
     }
     Ok(())
 }
 
 pub fn run() {
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new().build())
+    let mut app = tauri::Builder::default()
+        .plugin(logging::plugin())
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("error while running usher");
+    // right after build, not in setup: tao logs TRACE from applicationDidFinishLaunching before setup runs, and the
+    // plugin leaves the max level at Trace. M4 passes the persisted Debug setting.
+    logging::apply(false);
     // no Dock icon, not in ⌘Tab. Set before run: tao applies its policy (Regular by default) in
     // applicationDidFinishLaunching, which overrides Info.plist's LSUIElement; from setup it lands ~60 ms too late
-    #[cfg(target_os = "macos")]
-    let mut app = app;
-    #[cfg(target_os = "macos")]
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
     app.run(|_, _| {});
 }

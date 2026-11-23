@@ -1,1 +1,4 @@
-// The panel arrives in M4; Task 5 adds console forwarding here.
+import * as sink from "@tauri-apps/plugin-log";
+import { forwardConsole } from "./log";
+
+forwardConsole(console, sink);
