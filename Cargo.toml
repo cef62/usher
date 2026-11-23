@@ -1,7 +1,6 @@
 [workspace]
 resolver = "3"
-# "src-tauri" is commented out until Task 4 creates it.
-members = ["crates/usher-core"] # , "src-tauri"]
+members = ["crates/usher-core", "src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
