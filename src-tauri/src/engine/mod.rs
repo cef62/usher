@@ -2,21 +2,22 @@
 //! actions run against the `AudioSystem`, and a `Shell` hears about every visible change. No clock of its own:
 //! every entry point takes `now`, so tests drive time by hand.
 
+mod command;
 mod exec;
 mod rebind;
 mod thread;
 
+pub use command::{Refusal, Reply};
 pub use rebind::retry_delay;
-pub use thread::{EngineHandle, run};
+pub use thread::{EngineHandle, REQUEST_TIMEOUT, run};
 
 use std::sync::mpsc::Sender;
 use std::time::{Duration, Instant};
 
-use log::{debug, info, warn};
+use log::debug;
 use serde::Serialize;
 use usher_core::{
-    Command, PanelState, PausedReason, PerRole, Runtime, Snapshot, State, Timestamp, apply,
-    panel_state,
+    Command, PanelState, PausedReason, PerRole, Runtime, Snapshot, State, Timestamp, panel_state,
 };
 use usher_coreaudio::{AudioEvent, AudioSystem, Notify};
 
@@ -27,7 +28,7 @@ pub const USB_RECHECK: Duration = Duration::from_millis(500);
 
 pub enum Event {
     Audio(AudioEvent),
-    Command(Command),
+    Command(Command, Option<Reply>),
     ToggleAutoSwitch,
     Quit(Sender<()>),
 }
@@ -42,6 +43,7 @@ pub trait Shell {
     fn state_changed(&self, view: &PanelView);
     fn auto_switch_changed(&self, on: bool);
     fn paused(&self, reason: &PausedReason);
+    fn debug_changed(&self, on: bool);
 }
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
@@ -50,6 +52,8 @@ pub struct PanelView {
     #[serde(flatten)]
     pub panel: PanelState,
     pub errors: PerRole<Option<String>>,
+    /// The state file is from a newer usher: changes are not saved.
+    pub read_only: bool,
 }
 
 pub struct Clock {
@@ -83,6 +87,8 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     subscribed: bool,
     rebind_due: Option<Instant>,
     rebind_attempt: u32,
+    /// coreaudiod restarted and the rebind has not succeeded yet.
+    restarted: bool,
 }
 
 impl<A: AudioSystem, S: Shell> Engine<A, S> {
@@ -113,6 +119,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             subscribed: false,
             rebind_due: None,
             rebind_attempt: 0,
+            restarted: false,
         };
         e.attempt_bind(now);
         e.shell.auto_switch_changed(e.state.auto_switch);
@@ -123,13 +130,15 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     pub fn handle(&mut self, ev: Event, now: Instant) -> Flow {
         match ev {
             Event::Audio(a) => self.on_audio(a, now),
-            Event::Command(c) => {
-                self.on_command(c, now);
-                self.shell.auto_switch_changed(self.state.auto_switch);
+            Event::Command(c, reply) => {
+                let r = self.on_command(c, now);
+                if let Some(tx) = reply {
+                    let _ = tx.send(r);
+                }
             }
             Event::ToggleAutoSwitch => {
                 let on = !self.state.auto_switch;
-                self.on_command(Command::SetAutoSwitch(on), now);
+                let _ = self.on_command(Command::SetAutoSwitch(on), now);
                 // the tray flipped its own check on click: say the truth on every path (dropped, no-op, rejected)
                 self.shell.auto_switch_changed(self.state.auto_switch);
             }
@@ -198,6 +207,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         PanelView {
             panel: panel_state(&self.state, snap),
             errors: self.errors.clone(),
+            read_only: !self.store.writable(),
         }
     }
 
@@ -230,26 +240,5 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             self.usb_rechecked = false;
         }
         self.schedule_reconcile(now);
-    }
-
-    fn on_command(&mut self, cmd: Command, now: Instant) {
-        let Some(snap) = &self.snap else {
-            warn!("command {cmd:?} dropped: no scan yet");
-            return;
-        };
-        let was_on = self.state.auto_switch;
-        match apply(&mut self.state, &mut self.rt, snap, cmd) {
-            Ok(true) => {
-                self.store.mark_dirty(now);
-                if was_on != self.state.auto_switch {
-                    let on = self.state.auto_switch;
-                    info!("auto-switch {}", if on { "on" } else { "off" });
-                }
-                self.emit();
-                self.schedule_reconcile(now);
-            }
-            Ok(false) => {}
-            Err(e) => warn!("command rejected: {e}"),
-        }
     }
 }

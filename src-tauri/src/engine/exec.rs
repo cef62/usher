@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 use log::{debug, error, info, warn};
-use usher_core::{Action, DeviceKey, Outcome, Reason, Role, Snapshot, reconcile, seed};
+use usher_core::{Action, DeviceKey, Outcome, PerRole, Reason, Role, Snapshot, reconcile, seed};
 use usher_coreaudio::AudioSystem;
 
 use super::{Engine, Shell, USB_RECHECK};
@@ -34,6 +34,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         debug!("reconcile took {} ms", started.elapsed().as_millis());
         self.execute(&out, &snap, now);
         self.clear_errors(&out.reasons);
+        if !self.state.auto_switch {
+            self.errors = PerRole::default();
+        }
         if scan.usb_unresolved && !self.usb_rechecked && self.usb_due.is_none() {
             self.usb_due = Some(now + USB_RECHECK);
         }
@@ -59,7 +62,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         }
     }
 
-    fn name_of(&self, snap: &Snapshot, key: &DeviceKey) -> String {
+    pub(super) fn name_of(&self, snap: &Snapshot, key: &DeviceKey) -> String {
         snap.device(key)
             .map(|d| d.name.clone())
             .or_else(|| self.state.devices.get(key).map(|r| r.name.clone()))

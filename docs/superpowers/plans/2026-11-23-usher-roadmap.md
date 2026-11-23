@@ -11,7 +11,7 @@ one or more PRs, following the hop workflow (feature branch, quality gate, adver
 | M1 | Foundation | `2026-11-23-usher-m1-foundation.md` | The repo mirrors hop. The Cargo workspace builds. The Tauri app launches as an agent app with a tray icon and a Quit item, and writes logs, with debug level from `USHER_LOG`. CI runs build, test, clippy, fmt and the size check. | none |
 | M2 | Core domain | `2026-11-23-usher-m2-core.md` | `usher-core` covers everything in spec §5 and is fully unit-tested: the model, `desired`, `reconcile` with `Reason`s, the loop guard, the new-device and first-launch seeding, the alias registry, forget, and state serde. | M1 workspace |
 | M3 | Audio engine | `2026-11-23-usher-m3-engine.md` | `usher-coreaudio` and the engine thread. The JSON store is wired in. The app switches devices for real with no panel: the tray menu has the auto-switch toggle. Also coreaudiod rebind and loop-guard notifications. Usable day to day. | M1, M2 |
-| M4 | Panel and settings | (later) | The tray-anchored panel (React, dnd-kit, keyboard), the Settings window (login, debug toggle, show log), and the icon states. | M3 |
+| M4 | Panel and settings | `2026-11-23-usher-m4-panel.md` | The tray-anchored panel (React, dnd-kit, keyboard), the Settings window (login, debug toggle, show log), and the icon states. | M3 |
 | M5 | Updates and release | (later) | The updater, What's new and the release workflows from hop, plus the owner prerequisites (repo, key, secrets). First release. | M4 |
 
 ## Shared conventions (all plans)
@@ -77,3 +77,15 @@ The root `Cargo.toml` is a workspace with these members:
 - Panel commands go through `EngineHandle::send(Event::Command(..))`. M4 adds a reply channel if the panel needs the `CommandError`.
 - On `SetDebug`, the engine must call `logging::apply`.
 - The tray icon state is set by the engine through `Shell::auto_switch_changed`.
+
+## Carry-overs from M4 (for the M5 plan)
+
+- Settings gains `Check for updates daily` and `Check now` (spec §7.3) in `src/settings/Settings.tsx`. `SettingsView` gains the update fields. `SETTINGS_COMMANDS` gains `check_update`.
+- The panel footer gains `Update to usher X…` (spec §7.1) from a new `View.update` field. `PANEL_COMMANDS` gains `open_whatsnew`.
+- The What's new window gets label `whatsnew`, its own capability and guard list.
+- The right-click menu is where hop's updater tray item goes.
+
+## Backlog (post-v1)
+
+- Unresolved USB at launch can switch away for up to 500 ms (M4 plan, Decision 24). A fix reverses ADR 0006 ("the launch reconcile runs at once").
+- The panel may not show over a full-screen app's Space (ADR 0007).

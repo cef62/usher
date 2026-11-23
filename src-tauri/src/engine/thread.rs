@@ -7,7 +7,10 @@ use std::time::{Duration, Instant};
 use log::debug;
 use usher_coreaudio::{AudioSystem, Notify};
 
-use super::{Engine, Event, Flow, Shell};
+use super::{Engine, Event, Flow, Refusal, Shell};
+use usher_core::Command;
+
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
 #[derive(Clone)]
 pub struct EngineHandle(Sender<Event>);
@@ -32,6 +35,19 @@ impl EngineHandle {
         Arc::new(move |ev| {
             h.send(Event::Audio(ev));
         })
+    }
+
+    /// Send a command and wait up to `timeout` for the engine's verdict.
+    pub fn request(&self, cmd: Command, timeout: Duration) -> Result<(), Refusal> {
+        let (tx, rx) = mpsc::channel();
+        if !self.send(Event::Command(cmd, Some(tx))) {
+            return Err(Refusal::Gone);
+        }
+        match rx.recv_timeout(timeout) {
+            Ok(r) => r,
+            Err(RecvTimeoutError::Timeout) => Err(Refusal::NoAnswer),
+            Err(RecvTimeoutError::Disconnected) => Err(Refusal::Gone),
+        }
     }
 
     /// Ask the engine to flush and stop; `true` once it acknowledged within `timeout`.

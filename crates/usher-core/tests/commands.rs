@@ -269,3 +269,58 @@ fn promote_clears_never_use_for_that_role() {
     s.output.never_use.insert(key("b"));
     assert_eq!(run(&mut s, &[], promote_cmd("b")), Ok(true));
 }
+
+#[test]
+fn panel_json_parses_into_commands() {
+    let p = |s: &str| serde_json::from_str::<Command>(s);
+    assert_eq!(
+        p(r#"{"kind":"promote","args":{"role":"output","key":"AirPods-uid"}}"#).unwrap(),
+        Command::Promote {
+            role: Role::Output,
+            key: "AirPods-uid".into()
+        }
+    );
+    assert_eq!(
+        p(r#"{"kind":"reorder","args":{"role":"input","order":["a","b"]}}"#).unwrap(),
+        Command::Reorder {
+            role: Role::Input,
+            order: vec!["a".into(), "b".into()]
+        }
+    );
+    assert_eq!(
+        p(r#"{"kind":"setNeverUse","args":{"role":"output","key":"k","on":true}}"#).unwrap(),
+        Command::SetNeverUse {
+            role: Role::Output,
+            key: "k".into(),
+            on: true
+        }
+    );
+    assert_eq!(
+        p(r#"{"kind":"forget","args":{"key":"k"}}"#).unwrap(),
+        Command::Forget { key: "k".into() }
+    );
+    assert_eq!(
+        p(r#"{"kind":"setAutoSwitch","args":false}"#).unwrap(),
+        Command::SetAutoSwitch(false)
+    );
+    assert!(p(r#"{"kind":"format","args":{}}"#).is_err());
+    assert!(p(r#"{"kind":"promote","args":{"role":"speaker","key":"k"}}"#).is_err());
+}
+
+#[test]
+fn panel_json_rejects_unknown_and_malformed_input() {
+    let p = |s: &str| serde_json::from_str::<Command>(s);
+    assert_eq!(
+        p(r#"{"kind":"setDebug","args":true}"#).unwrap(),
+        Command::SetDebug(true)
+    );
+    assert!(p(r#"{"kind":"forget","args":{"key":"k","x":1}}"#).is_err());
+    assert!(p(r#"{"kind":"forget"}"#).is_err());
+    assert!(p(r#"{"kind":"setAutoSwitch","args":"x"}"#).is_err());
+}
+
+#[test]
+fn panel_json_rejects_extra_top_level_key() {
+    let r = serde_json::from_str::<Command>(r#"{"kind":"forget","args":{"key":"k"},"extra":1}"#);
+    assert!(r.is_err());
+}

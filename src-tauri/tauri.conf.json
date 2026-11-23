@@ -10,7 +10,25 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [],
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "panel",
+        "url": "index.html",
+        "width": 360,
+        "height": 120,
+        "visible": false,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "visibleOnAllWorkspaces": true,
+        "skipTaskbar": true,
+        "shadow": true,
+        "focus": false,
+        "acceptFirstMouse": true
+      }
+    ],
     "security": {
       "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     }

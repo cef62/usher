@@ -1,11 +1,12 @@
 //! The engine's window onto the app: panel events, tray state, loop-guard notification.
 
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::sync::mpsc::Receiver;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use log::{error, warn};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::{NotificationExt, PermissionState};
 use usher_core::{PausedReason, Timestamp};
 use usher_coreaudio::{CoreAudioSystem, Notify};
@@ -14,10 +15,16 @@ use crate::engine::{Clock, Engine, Event, PanelView, Shell, run};
 use crate::store::Store;
 use crate::{logging, tray};
 
+/// The engine's last view, for a window that opens after the event (`get_view`, `get_settings`).
+pub struct LastView(pub Mutex<Option<PanelView>>);
+
 pub struct TauriShell(AppHandle);
 
 impl Shell for TauriShell {
     fn state_changed(&self, view: &PanelView) {
+        if let Some(last) = self.0.try_state::<LastView>() {
+            *last.0.lock().unwrap_or_else(|p| p.into_inner()) = Some(view.clone());
+        }
         if let Err(e) = self.0.emit("state-changed", view) {
             warn!("state-changed emit failed ({e})");
         }
@@ -25,6 +32,10 @@ impl Shell for TauriShell {
 
     fn auto_switch_changed(&self, on: bool) {
         tray::set_auto(&self.0, on);
+    }
+
+    fn debug_changed(&self, on: bool) {
+        logging::apply(on);
     }
 
     fn paused(&self, reason: &PausedReason) {
@@ -45,7 +56,8 @@ impl Shell for TauriShell {
 }
 
 /// Opens the store and starts the engine thread. `CoreAudioSystem` is !Send, so it is built inside the thread.
-pub fn spawn(app: &AppHandle, rx: Receiver<Event>, notify: Notify, dir: PathBuf) {
+/// `false` when the thread did not start.
+pub fn spawn(app: &AppHandle, rx: Receiver<Event>, notify: Notify, dir: PathBuf) -> bool {
     let (store, state) = Store::open(dir.join("state.json"));
     logging::apply(state.as_ref().is_some_and(|s| s.debug));
     let shell = TauriShell(app.clone());
@@ -71,7 +83,8 @@ pub fn spawn(app: &AppHandle, rx: Receiver<Event>, notify: Notify, dir: PathBuf)
             );
             run(engine, rx);
         });
-    if let Err(e) = spawned {
+    if let Err(e) = &spawned {
         error!("engine thread did not start ({e})");
     }
+    spawned.is_ok()
 }
