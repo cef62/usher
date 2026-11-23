@@ -1,6 +1,9 @@
 //! Pure domain for usher; no I/O, no clock. Filled in M2.
 #![forbid(unsafe_code)]
 
+mod model;
+pub use model::*;
+
 #[cfg(test)]
 mod tests {
     #[test]
