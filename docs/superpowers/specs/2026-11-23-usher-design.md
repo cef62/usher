@@ -208,7 +208,7 @@ your audio just because it was launched.
 
 - `usher-core` does no I/O. `reconcile()` returns its actions together with a `Vec<Reason>`: for each
   role, the desired device, the current device, and why each higher-ranked device was skipped
-  (disconnected, not alive, never use, no streams).
+  (disconnected, not alive, hidden, no streams, never use).
 - The engine is what logs these reasons.
 
 **Normal level (info): one line per event that matters**
