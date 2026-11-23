@@ -1,4 +1,12 @@
-//! Pure domain for usher; no I/O, no clock. Filled in M2.
+//! Pure domain for usher: no I/O, no clock, no logging.
+//!
+//! M3 contract. The engine owns [`State`] (persisted) and [`Runtime`] (in memory).
+//! Per coalesced event it passes a [`Snapshot`] to [`reconcile`], executes the
+//! returned [`Outcome`]`.actions` (`SetDefault`, `PauseAuto`, `AliasMerged` log,
+//! `Persist`) and logs `Outcome.reasons`. UI commands go through [`apply`]
+//! followed by [`reconcile`]. [`panel_state`] renders the [`PanelState`] view
+//! model. [`seed`] builds the first-launch state; [`from_json`] and [`to_json`]
+//! (de)serialise it.
 #![forbid(unsafe_code)]
 
 mod commands;
