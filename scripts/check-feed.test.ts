@@ -32,6 +32,9 @@ it("keyId reads bytes 2..10 and throws on malformed input", () => {
   expect(() => keyId("")).toThrow();
   expect(() => keyId(Buffer.from("only one line").toString("base64"))).toThrow();
   expect(() => keyId(box("c", Buffer.alloc(4)))).toThrow();
+  expect(() => keyId(box("c", Buffer.concat([Buffer.from("Ed"), id(1), Buffer.alloc(31)])))).toThrow(); // truncated key
+  expect(() => keyId(box("c", Buffer.concat([Buffer.from("ED"), id(1), Buffer.alloc(63)])))).toThrow(); // truncated signature
+  expect(() => keyId(box("c", Buffer.concat([Buffer.from("XX"), id(1), Buffer.alloc(32)])))).toThrow(); // wrong algorithm
 });
 
 const run = (f: object, conf: object, version: string) => {

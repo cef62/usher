@@ -11,7 +11,9 @@ const PLATFORM = "darwin-aarch64";
 export function keyId(box) {
   const payload = Buffer.from(box, "base64").toString("utf8").split(/\r?\n/)[1];
   const bytes = Buffer.from(payload ?? "", "base64");
-  if (bytes.length < 10) throw new Error("not a minisign file");
+  // minisign: public key = "Ed" + id + 32-byte key (42 bytes); signature = "ED" + id + 64-byte signature (74 bytes)
+  const ok = (bytes.length === 42 && bytes.toString("latin1", 0, 2) === "Ed") || (bytes.length === 74 && bytes.toString("latin1", 0, 2) === "ED");
+  if (!ok) throw new Error("not a minisign file");
   return bytes.subarray(2, 10).toString("hex");
 }
 

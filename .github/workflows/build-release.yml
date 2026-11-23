@@ -32,6 +32,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
+          [[ "$TAG" == v* ]] || { echo "::error::tag must start with v"; exit 1; }
           # Release notes = this version's CHANGELOG section (headings kept) + the install hints below a `---` line,
           # which the app's What's new window cuts off. Tested in scripts/release-notes.test.ts.
           node scripts/release-notes.mjs "${TAG#v}" CHANGELOG.md > notes.md

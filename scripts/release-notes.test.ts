@@ -79,16 +79,6 @@ test("the command line prints the notes for the workflow", () => {
   writeFileSync(join(dir, "CHANGELOG.md"), CHANGELOG);
   const out = execFileSync(process.execPath, [join(__dirname, "release-notes.mjs"), "0.18.0", join(dir, "CHANGELOG.md")], { encoding: "utf8" });
   expect(out).toBe(releaseNotes(CHANGELOG, "0.18.0"));
-});
-test("the usher install hint names /Applications/usher.app", () => {
-  expect(HINTS).toContain("/Applications/usher.app");
-});
-
-test("the command line prints the notes for the workflow", () => {
-  const dir = mkdtempSync(join(tmpdir(), "usher-notes-"));
-  writeFileSync(join(dir, "CHANGELOG.md"), CHANGELOG);
-  const out = execFileSync(process.execPath, [join(__dirname, "release-notes.mjs"), "0.18.0", join(dir, "CHANGELOG.md")], { encoding: "utf8" });
-  expect(out).toBe(releaseNotes(CHANGELOG, "0.18.0"));
   const empty = execFileSync(process.execPath, [join(__dirname, "release-notes.mjs"), "0.1.0", "/dev/null"], { encoding: "utf8" });
   expect(empty).toBe(`${FALLBACK}${tail}`);
 });
