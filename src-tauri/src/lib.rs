@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(w["acceptFirstMouse"], true);
         assert_eq!(
             w["windowEffects"],
-            serde_json::json!({ "effects": ["menu"], "state": "active", "radius": 10 })
+            serde_json::json!({ "effects": ["sidebar"], "state": "active", "radius": 10 })
         );
         assert_eq!(c["app"]["macOSPrivateApi"], true);
         assert_eq!(
