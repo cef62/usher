@@ -15,6 +15,8 @@ pub struct PortIdentity {
     pub endpoint: String,
 }
 
+pub(crate) mod registry;
+
 pub fn parse_port(uid: &str) -> Option<PortIdentity> {
     parse_usb(uid).or_else(|| parse_display(uid))
 }
