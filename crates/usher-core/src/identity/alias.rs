@@ -20,7 +20,9 @@ pub fn merge_aliases(state: &mut State, snap: &Snapshot) -> Vec<Merge> {
     latch_ambiguous(state, &candidates);
     let mut merges = Vec::new();
     for (to, id) in &candidates {
-        if state.ambiguous_families.contains(&id.family) {
+        // The latch above counts every candidate; only listable devices may receive a rank.
+        let listable = snap.device(to).is_some_and(|d| d.listable());
+        if !listable || state.ambiguous_families.contains(&id.family) {
             continue;
         }
         for from in donors_for(state, snap, id) {

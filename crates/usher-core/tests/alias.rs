@@ -155,3 +155,33 @@ fn different_endpoint_is_not_merged() {
     assert!(step(&mut s, vec![usb_ep(P2, "2", true)]).is_empty());
     assert_eq!(order(&s, Role::Output).len(), 2);
 }
+
+#[test]
+fn hidden_candidate_does_not_receive_a_merge() {
+    let mut s = State::default();
+    step(&mut s, vec![usb(P1, true), dev("other", 1, 1)]);
+    s.output.order = vec![key(&uid(P1)), key("other")];
+    let mut hidden = usb(P2, true);
+    hidden.hidden = true;
+    assert!(step(&mut s, vec![hidden]).is_empty());
+    assert_eq!(order(&s, Role::Output), [uid(P1).as_str(), "other"]);
+    let merges = step(&mut s, vec![usb(P2, true)]);
+    assert_eq!(merges, [m(&uid(P1), &uid(P2))]);
+    assert_eq!(order(&s, Role::Output), [uid(P2).as_str(), "other"]);
+}
+
+#[test]
+fn donor_tie_break_is_key_ascending() {
+    let mut s = State::default();
+    step(&mut s, vec![usb(P1, true)]);
+    let lo = "14100000";
+    let mut rec = s.devices[&key(&uid(P1))].clone();
+    rec.name = "low".into();
+    s.devices.insert(key(&uid(lo)), rec);
+    s.devices.get_mut(&key(&uid(P1))).unwrap().name = "high".into();
+    s.output.order.push(key(&uid(lo)));
+    // Before remember, which would overwrite the name.
+    let merges = merge_aliases(&mut s, &snap(vec![usb(P2, true)], None, None));
+    assert_eq!(merges, [m(&uid(lo), &uid(P2)), m(&uid(P1), &uid(P2))]);
+    assert_eq!(s.devices[&key(&uid(P2))].name, "low");
+}
