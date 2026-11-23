@@ -15,6 +15,8 @@ pub struct PortIdentity {
     pub endpoint: String,
 }
 
+mod alias;
+pub use alias::*;
 pub(crate) mod registry;
 
 pub fn parse_port(uid: &str) -> Option<PortIdentity> {

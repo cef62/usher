@@ -10,6 +10,9 @@ mod remember;
 mod state;
 pub use desired::*;
 pub use guard::*;
+pub use identity::Merge;
+#[doc(hidden)]
+pub use identity::merge_aliases;
 pub use model::*;
 pub use reason::*;
 #[doc(hidden)]

@@ -61,7 +61,6 @@ fn mapped(f: &impl Fn(&DeviceKey) -> Edit, key: DeviceKey) -> Option<DeviceKey> 
 
 /// Rewrite `from` to `to` everywhere; on a collision the better order rank,
 /// the never-use flag of either key and `to`'s device record survive.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn rename(state: &mut State, from: &DeviceKey, to: &DeviceKey) {
     edit_keys(state, |k| {
         if k == from && from != to {
