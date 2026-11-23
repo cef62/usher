@@ -3,17 +3,22 @@
 pub mod engine;
 mod instance;
 mod logging;
+mod shell;
 pub mod store;
 mod tray;
 
+use std::time::Duration;
+
+use engine::EngineHandle;
 use tauri::Manager;
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     log::info!("usher {} starting", app.package_info().version);
+    let dir = app.path().app_data_dir();
     // a second copy (login item beside a running usher, or a dev build) leaves before it registers anything
-    match app.path().app_data_dir() {
+    match &dir {
         Ok(dir) => {
-            if !instance::hold_instance_lock(&dir) {
+            if !instance::hold_instance_lock(dir) {
                 log::warn!("another usher is running; this one exits");
                 std::process::exit(0);
             }
@@ -21,10 +26,17 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => log::warn!("no app data dir, instance lock skipped ({e})"),
     }
+    let (handle, rx) = EngineHandle::new();
+    app.manage(handle.clone());
     if let Err(e) = tray::build(app.handle()) {
         // an agent app without a tray has no UI and no way to quit
         log::error!("no menu-bar icon ({e})");
         std::process::exit(1);
+    }
+    match dir {
+        Ok(dir) => shell::spawn(app.handle(), rx, handle.notify(), dir),
+        // no state file location, no engine; the tray still works and Quit still exits
+        Err(e) => log::error!("engine not started: no app data dir ({e})"),
     }
     Ok(())
 }
@@ -41,6 +53,7 @@ pub fn run() {
     log_panics();
     let mut app = tauri::Builder::default()
         .plugin(logging::plugin())
+        .plugin(tauri_plugin_notification::init())
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("error while running usher");
@@ -50,7 +63,12 @@ pub fn run() {
     // no Dock icon, not in ⌘Tab. Set before run: tao applies its policy (Regular by default) in
     // applicationDidFinishLaunching, which overrides Info.plist's LSUIElement; from setup it lands ~60 ms too late
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-    app.run(|_, _| {});
+    app.run(|app, ev| {
+        if let tauri::RunEvent::Exit = ev {
+            // flush state.json; false when the engine never started or is gone
+            app.state::<EngineHandle>().quit(Duration::from_secs(1));
+        }
+    });
 }
 
 #[cfg(test)]
