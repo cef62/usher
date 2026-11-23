@@ -1,0 +1,19 @@
+[workspace]
+resolver = "3"
+# "src-tauri" is commented out until Task 4 creates it.
+members = ["crates/usher-core"] # , "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.lints.clippy]
+too_many_lines = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
