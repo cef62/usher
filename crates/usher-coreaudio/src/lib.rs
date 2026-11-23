@@ -4,6 +4,14 @@
 use std::fmt;
 use std::sync::Arc;
 
+// dead_code until CoreAudioSystem (Task 4) calls these.
+#[allow(dead_code)]
+mod props;
+#[allow(dead_code)]
+mod scan;
+#[allow(dead_code)]
+mod usb;
+
 use usher_core::{DeviceKey, Role, Snapshot};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -46,7 +54,6 @@ pub trait AudioSystem {
     fn rebind(&mut self) -> Result<(), AudioError>;
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn check(call: &'static str, status: i32) -> Result<(), AudioError> {
     if status == 0 {
         Ok(())
