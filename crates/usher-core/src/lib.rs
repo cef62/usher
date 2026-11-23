@@ -6,7 +6,9 @@ mod guard;
 pub mod identity;
 mod model;
 mod reason;
+mod reconcile;
 mod remember;
+mod seed;
 mod state;
 pub use desired::*;
 pub use guard::*;
@@ -15,8 +17,10 @@ pub use identity::Merge;
 pub use identity::merge_aliases;
 pub use model::*;
 pub use reason::*;
+pub use reconcile::*;
 #[doc(hidden)]
 pub use remember::remember;
+pub use seed::seed;
 pub use state::*;
 
 #[cfg(test)]
