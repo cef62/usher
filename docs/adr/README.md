@@ -35,3 +35,4 @@ What gets easier, what gets harder, what we must now do.
 | [0003](0003-strict-priority-policy.md) | Strict priority: always enforce the top connected device | Accepted |
 | [0004](0004-logging-and-debug-mode.md) | Logging and debug mode from day one | Accepted |
 | [0005](0005-cargo-workspace-and-size-limits.md) | Cargo workspace layout and size limits | Accepted |
+| [0006](0006-engine-threading-and-coreaudio-binding.md) | Engine threading and the CoreAudio binding | Accepted |
