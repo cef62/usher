@@ -20,6 +20,7 @@ usher-core = { path = "../crates/usher-core" }
 usher-coreaudio = { path = "../crates/usher-coreaudio" }
 serde = { version = "1.0.229", features = ["derive"] }
 tauri-plugin-notification = "2.8.1"
+tauri-plugin-autostart = "2.7.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"

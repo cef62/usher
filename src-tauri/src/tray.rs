@@ -67,6 +67,7 @@ fn on_menu(app: &AppHandle, id: &str) {
                 set_auto(app, app.state::<LastAuto>().0.load(Ordering::Relaxed));
             }
         }
+        "settings" => crate::settings::open(app),
         "quit" => {
             log::info!("quit from tray");
             app.exit(0);

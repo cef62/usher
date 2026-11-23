@@ -1,9 +1,12 @@
 #![forbid(unsafe_code)]
 
+mod commands;
 pub mod engine;
 mod instance;
 mod logging;
+mod login;
 mod panel;
+mod settings;
 mod shell;
 pub mod store;
 mod tray;
@@ -11,6 +14,7 @@ mod tray;
 use std::time::Duration;
 
 use engine::EngineHandle;
+use std::sync::Mutex;
 use tauri::Manager;
 
 /// Managed only when the engine thread was spawned.
@@ -32,6 +36,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
     let (handle, rx) = EngineHandle::new();
     app.manage(handle.clone());
+    app.manage(shell::LastView(Mutex::new(None)));
     panel::setup(app.handle());
     if let Err(e) = tray::build(app.handle()) {
         // an agent app without a tray has no UI and no way to quit
@@ -40,12 +45,14 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
     match dir {
         Ok(dir) => {
-            shell::spawn(app.handle(), rx, handle.notify(), dir);
-            app.manage(EngineStarted);
+            if shell::spawn(app.handle(), rx, handle.notify(), dir) {
+                app.manage(EngineStarted);
+            }
         }
         // no state file location, no engine; the tray still works and Quit still exits
         Err(e) => log::error!("engine not started: no app data dir ({e})"),
     }
+    login::refresh(app.handle());
     Ok(())
 }
 
@@ -62,6 +69,11 @@ pub fn run() {
     let mut app = tauri::Builder::default()
         .plugin(logging::plugin())
         .plugin(tauri_plugin_notification::init())
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .app_name(login::AUTOSTART_NAME)
+                .build(),
+        )
         .setup(setup)
         .on_window_event(|w, ev| {
             if let tauri::WindowEvent::Focused(f) = ev
@@ -70,11 +82,21 @@ pub fn run() {
                 panel::focus_changed(w.app_handle(), *f);
             }
         })
-        .invoke_handler(tauri::generate_handler![panel::hide_panel])
+        .invoke_handler(commands::with_window_guard(tauri::generate_handler![
+            commands::get_view,
+            commands::run_command,
+            panel::hide_panel,
+            commands::open_settings,
+            commands::quit,
+            settings::get_settings,
+            login::set_login,
+            settings::set_debug,
+            settings::reveal_log
+        ]))
         .build(tauri::generate_context!())
         .expect("error while running usher");
     // right after build, not in setup: tao logs TRACE from applicationDidFinishLaunching before setup runs, and the
-    // plugin leaves the max level at Trace. M4 passes the persisted Debug setting.
+    // plugin leaves the max level at Trace.
     logging::apply(false);
     // no Dock icon, not in ⌘Tab. Set before run: tao applies its policy (Regular by default) in
     // applicationDidFinishLaunching, which overrides Info.plist's LSUIElement; from setup it lands ~60 ms too late
@@ -128,5 +150,13 @@ mod tests {
                 "core:window:allow-set-size"
             ])
         );
+    }
+
+    #[test]
+    fn settings_capability_grants_log_only() {
+        let cap: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/settings.json")).unwrap();
+        assert_eq!(cap["windows"], serde_json::json!(["settings"]));
+        assert_eq!(cap["permissions"], serde_json::json!(["log:default"]));
     }
 }
