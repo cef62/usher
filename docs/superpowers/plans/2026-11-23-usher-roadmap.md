@@ -55,3 +55,10 @@ The root `Cargo.toml` is a workspace with these members:
 **ADRs**
 
 - Any decision that departs from the spec gets a new ADR in `docs/adr/`.
+
+## Carry-overs from M1 (for the M4 plan)
+
+- The panel window label must be `panel`: `src-tauri/capabilities/default.json` grants `log:default` only to that label, otherwise webview log forwarding is silently denied.
+- Never call plugin-log `attachConsole()` alongside `forwardConsole` (log loop).
+- Re-check the CSP once the first window loads (copied from hop, untested without a window).
+- Call `logging::apply(debug_setting)` when the Debug toggle changes.
