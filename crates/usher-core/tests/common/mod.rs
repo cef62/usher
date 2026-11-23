@@ -29,3 +29,12 @@ pub fn snap(devices: Vec<DeviceSnapshot>, output: Option<&str>, input: Option<&s
         },
     }
 }
+
+pub fn order(state: &usher_core::State, role: usher_core::Role) -> Vec<&str> {
+    state
+        .list(role)
+        .order
+        .iter()
+        .map(|k| k.0.as_str())
+        .collect()
+}
