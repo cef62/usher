@@ -100,8 +100,8 @@ pub fn setup(app: &AppHandle) {
     app.manage(Mutex::new(Visibility::default()));
 }
 
-/// Top-left in points under the tray icon; `None` without a monitor. The list is empty while a display sleeps.
-fn position(app: &AppHandle, icon: tauri::Rect) -> Option<LogicalPosition<f64>> {
+/// Physical monitor frames with their scales. The list is empty while a display sleeps: fall back to the primary.
+fn monitors(app: &AppHandle) -> Option<Vec<(place::Frame, f64)>> {
     let primary = app.primary_monitor().ok().flatten();
     let ms = app
         .available_monitors()
@@ -123,6 +123,19 @@ fn position(app: &AppHandle, icon: tauri::Rect) -> Option<LogicalPosition<f64>> 
             )
         })
         .collect();
+    Some(ms)
+}
+
+/// Top-left in points under the tray icon; `None` without a monitor. The list is empty while a display sleeps.
+fn position(app: &AppHandle, icon: tauri::Rect) -> Option<LogicalPosition<f64>> {
+    let ms = monitors(app)?;
+    // tao reports the cursor as points times the primary scale
+    let cursor = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .zip(app.cursor_position().ok())
+        .map(|(m, c)| (c.x / m.scale_factor(), c.y / m.scale_factor()));
     let (p, s) = (
         icon.position.to_physical::<f64>(1.0),
         icon.size.to_physical::<f64>(1.0),
@@ -134,6 +147,7 @@ fn position(app: &AppHandle, icon: tauri::Rect) -> Option<LogicalPosition<f64>> 
             w: s.width,
             h: s.height,
         },
+        cursor,
         &ms,
     )?;
     let (x, y) = place::anchor(icon, screen, WIDTH);

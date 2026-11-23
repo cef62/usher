@@ -22,17 +22,28 @@ fn scaled(f: Frame, k: f64) -> Frame {
     }
 }
 
-/// `monitors` are physical frames with their scale. Returns the icon and its screen in points. The screen is the
-/// first monitor whose point frame holds the icon's centre at that monitor's scale, else the first; `None` for no
-/// monitors. tao on macOS reports the tray rect and each monitor frame in pixels of the monitor they sit on, so the
-/// comparison happens per monitor, in points.
-pub fn to_points(icon_px: Frame, monitors: &[(Frame, f64)]) -> Option<(Frame, Frame)> {
-    let holds = |&&(m, k): &&(Frame, f64)| {
-        let (s, i) = (scaled(m, k), scaled(icon_px, k));
-        let (cx, cy) = (i.x + i.w / 2.0, i.y + i.h / 2.0);
-        cx >= s.x && cx < s.x + s.w && cy >= s.y && cy < s.y + s.h
+/// `monitors` are physical frames with their scale. Returns the icon and its screen in points; `None` for no monitors.
+///
+/// The tray rect is points times the status item's scale and each monitor frame is points times its own scale, so a
+/// pixel value alone does not say which monitor holds the icon. `cursor_pt` (the click's global point: tao's cursor
+/// divided by the primary scale) picks the monitor whose point frame holds it. Without a cursor, or off every
+/// monitor, the first monitor whose point frame holds the icon's centre at that monitor's scale wins, else the first.
+pub fn to_points(
+    icon_px: Frame,
+    cursor_pt: Option<(f64, f64)>,
+    monitors: &[(Frame, f64)],
+) -> Option<(Frame, Frame)> {
+    let inside =
+        |s: Frame, (x, y): (f64, f64)| x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h;
+    let by_cursor =
+        cursor_pt.and_then(|c| monitors.iter().find(|&&(m, k)| inside(scaled(m, k), c)));
+    let by_icon = || {
+        monitors.iter().find(|&&(m, k)| {
+            let i = scaled(icon_px, k);
+            inside(scaled(m, k), (i.x + i.w / 2.0, i.y + i.h / 2.0))
+        })
     };
-    let &(m, k) = monitors.iter().find(holds).or(monitors.first())?;
+    let &(m, k) = by_cursor.or_else(by_icon).or(monitors.first())?;
     Some((scaled(icon_px, k), scaled(m, k)))
 }
 
@@ -75,8 +86,12 @@ mod tests {
     }
     #[test]
     fn icon_on_a_2x_primary() {
-        let (icon, screen) =
-            to_points(f(2000., 0., 60., 48.), &[(f(0., 0., 3024., 1964.), 2.)]).unwrap();
+        let (icon, screen) = to_points(
+            f(2000., 0., 60., 48.),
+            None,
+            &[(f(0., 0., 3024., 1964.), 2.)],
+        )
+        .unwrap();
         assert_eq!(
             (icon, screen),
             (f(1000., 0., 30., 24.), f(0., 0., 1512., 982.))
@@ -89,18 +104,36 @@ mod tests {
             (f(1512., 0., 1920., 1080.), 1.),
         ];
         // 3400 px is 1700 pt on the 2x primary (outside it), so only the 1x display holds it
-        let (icon, screen) = to_points(f(3400., 0., 30., 24.), &ms).unwrap();
+        let (icon, screen) = to_points(f(3400., 0., 30., 24.), None, &ms).unwrap();
         assert_eq!(screen, f(1512., 0., 1920., 1080.));
         assert_eq!(icon.x, 3400.);
     }
     #[test]
     fn no_monitor_is_none_and_off_screen_falls_back_to_first() {
-        assert!(to_points(f(0., 0., 1., 1.), &[]).is_none());
+        assert!(to_points(f(0., 0., 1., 1.), None, &[]).is_none());
         assert_eq!(
-            to_points(f(-9000., 0., 30., 24.), &[(f(0., 0., 3024., 1964.), 2.)])
-                .unwrap()
-                .1,
+            to_points(
+                f(-9000., 0., 30., 24.),
+                None,
+                &[(f(0., 0., 3024., 1964.), 2.)]
+            )
+            .unwrap()
+            .1,
             f(0., 0., 1512., 982.)
         );
+    }
+    #[test]
+    fn cursor_picks_the_screen_where_pixels_are_ambiguous() {
+        // 2900 px is 1450 pt on the 2x primary (inside it) and 2900 pt on the 1x secondary; the cursor decides
+        let ms = [
+            (f(0., 0., 3024., 1964.), 2.),
+            (f(1512., 0., 1440., 900.), 1.),
+        ];
+        let (icon, screen) = to_points(f(2900., 0., 30., 24.), Some((2910., 12.)), &ms).unwrap();
+        assert_eq!(screen, f(1512., 0., 1440., 900.));
+        assert_eq!(icon.x, 2900.);
+        // cursor on the primary: same pixels, other screen
+        let (icon, screen) = to_points(f(2900., 0., 30., 24.), Some((1460., 12.)), &ms).unwrap();
+        assert_eq!((icon.x, screen), (1450., f(0., 0., 1512., 982.)));
     }
 }
