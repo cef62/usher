@@ -2,6 +2,7 @@
 // the binding's FourCC constants are camel-case and used as match patterns
 #![allow(non_upper_case_globals)]
 use objc2_core_audio::*;
+use usher_core::identity::alias_identity;
 use usher_core::{DeviceKey, DeviceSnapshot, PerRole, Snapshot, Transport};
 
 use crate::props::{get_ids, get_string, get_u32, stream_count};
@@ -89,9 +90,9 @@ fn resolve_usb(devices: &mut [DeviceSnapshot]) -> bool {
     unresolved
 }
 
-fn log_device(d: &DeviceSnapshot) {
-    log::debug!(
-        "device {} {:?} {:?} alive={} hidden={} in={} out={} serialless={}",
+pub(crate) fn device_line(d: &DeviceSnapshot) -> String {
+    format!(
+        "device {} {:?} {:?} alive={} hidden={} in={} out={} serialless={} family={:?}",
         d.uid.as_str(),
         d.name,
         d.transport,
@@ -99,8 +100,9 @@ fn log_device(d: &DeviceSnapshot) {
         d.hidden,
         d.input_streams,
         d.output_streams,
-        d.serialless_usb
-    );
+        d.serialless_usb,
+        alias_identity(d).map(|i| i.family)
+    )
 }
 
 pub(crate) fn scan() -> Result<Scan, AudioError> {
@@ -116,7 +118,9 @@ pub(crate) fn scan() -> Result<Scan, AudioError> {
         }
     }
     let usb_unresolved = resolve_usb(&mut devices);
-    devices.iter().for_each(log_device);
+    devices
+        .iter()
+        .for_each(|d| log::debug!("{}", device_line(d)));
     let current = PerRole {
         output: default_uid(kAudioHardwarePropertyDefaultOutputDevice, &known)?,
         input: default_uid(kAudioHardwarePropertyDefaultInputDevice, &known)?,
@@ -180,5 +184,30 @@ mod tests {
     #[test]
     fn unknown_default_is_looked_up() {
         assert_eq!(default_key(9, &[], |_| Ok(key("B"))), Some(key("B")));
+    }
+
+    fn snap(uid: &str, transport: Transport) -> DeviceSnapshot {
+        DeviceSnapshot {
+            uid: key(uid),
+            name: "LG".into(),
+            transport,
+            alive: true,
+            hidden: false,
+            input_streams: 0,
+            output_streams: 2,
+            serialless_usb: false,
+        }
+    }
+
+    #[test]
+    fn device_line_includes_the_alias_family() {
+        let d = snap(
+            "37D8832A-2D66-02CA-B9F7-8F30A301B230",
+            Transport::DisplayPort,
+        );
+        let line = device_line(&d);
+        assert!(line.contains("family=Some(\""), "{line}");
+        let spk = snap("BuiltInSpeakerDevice", Transport::BuiltIn);
+        assert!(device_line(&spk).ends_with("family=None"));
     }
 }

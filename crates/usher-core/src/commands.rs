@@ -1,10 +1,12 @@
 //! Panel actions as pure state transitions. The engine runs `reconcile` after every `Ok`.
 use crate::identity::registry;
 use crate::{DeviceKey, Role, Runtime, Snapshot, State};
+use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::fmt;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Deserialize)]
+#[serde(tag = "kind", content = "args", rename_all = "camelCase")]
 pub enum Command {
     Reorder {
         role: Role,
