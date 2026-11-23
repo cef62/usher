@@ -25,7 +25,7 @@ pub struct SettingsView {
 
 /// Opens Settings, or brings it to the front. The panel hides first.
 pub fn open(app: &AppHandle) {
-    panel::hide_for_settings(app); // no app.hide(): the previous app must not flash active
+    panel::hide_for_window(app); // no app.hide(): the previous app must not flash active
     app.show().ok(); // an earlier panel hide left the app hidden
     if let Some(w) = app.get_webview_window(LABEL) {
         w.unminimize().ok();

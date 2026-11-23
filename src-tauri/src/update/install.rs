@@ -117,16 +117,11 @@ pub fn refresh_tray(app: &AppHandle) {
     }
 }
 
-// Task 4: replaced by crate::whatsnew::open
-fn open_whatsnew(_app: &AppHandle) {
-    log::info!("what's new window arrives in a later task");
-}
-
 /// The menu-bar item. With an update found: the What's new window. Otherwise a check whose answer the user asked for:
 /// What's new when one is found, else a message (up to date, busy or the error).
 pub fn tray_clicked(app: &AppHandle) {
     if pending(app).is_some() {
-        open_whatsnew(app);
+        crate::whatsnew::open(app);
         return;
     }
     let app = app.clone();
@@ -142,7 +137,8 @@ pub fn tray_clicked(app: &AppHandle) {
         match super::check(&app).await {
             Ok(Some(_)) => {
                 let a = app.clone();
-                app.run_on_main_thread(move || open_whatsnew(&a)).ok();
+                app.run_on_main_thread(move || crate::whatsnew::open(&a))
+                    .ok();
             }
             Ok(None) => say(
                 MessageDialogKind::Info,

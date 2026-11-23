@@ -1,6 +1,7 @@
 //! The panel window: a 360 pt window anchored under the tray icon. `Visibility` decides, the glue performs.
 
 pub mod place;
+pub use place::other_window_visible;
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -75,13 +76,13 @@ impl Visibility {
 pub enum GiveBack {
     /// Hide the whole app: macOS refocuses the app that was active before.
     HideApp,
-    /// Settings is open and hiding the app would hide it too.
+    /// Settings or What's new is open and hiding the app would hide it too.
     Stay,
 }
 
-/// `opening_settings`: Settings takes the focus next, so the previous app must not flash active.
-pub fn give_back(settings_visible: bool, opening_settings: bool) -> GiveBack {
-    if settings_visible || opening_settings {
+/// `opening_window`: Settings or What's new takes the focus next, so the previous app must not flash active.
+pub fn give_back(other_visible: bool, opening_window: bool) -> GiveBack {
+    if other_visible || opening_window {
         GiveBack::Stay
     } else {
         GiveBack::HideApp
@@ -90,11 +91,6 @@ pub fn give_back(settings_visible: bool, opening_settings: bool) -> GiveBack {
 
 fn window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(LABEL)
-}
-
-fn settings_visible(app: &AppHandle) -> bool {
-    app.get_webview_window("settings")
-        .is_some_and(|w| w.is_visible().unwrap_or(false))
 }
 
 pub fn setup(app: &AppHandle) {
@@ -179,7 +175,7 @@ fn position(app: &AppHandle, icon: tauri::Rect) -> Option<LogicalPosition<f64>> 
 fn apply(
     app: &AppHandle,
     icon: Option<tauri::Rect>,
-    opening_settings: bool,
+    opening_window: bool,
     step: impl FnOnce(&mut Visibility) -> Step,
 ) {
     let step = step(
@@ -202,7 +198,11 @@ fn apply(
         }
         Step::Hide => {
             w.hide().ok();
-            if give_back(settings_visible(app), opening_settings) == GiveBack::HideApp
+            let shown = |l: &str| {
+                app.get_webview_window(l)
+                    .is_some_and(|w| w.is_visible().unwrap_or(false))
+            };
+            if give_back(other_window_visible(shown), opening_window) == GiveBack::HideApp
                 && let Err(e) = app.hide()
             {
                 warn!("app not hidden ({e})");
@@ -226,8 +226,8 @@ pub fn hide(app: &AppHandle) {
     apply(app, None, false, Visibility::hide);
 }
 
-/// Hide for Settings: the app stays active, so the previous app never flashes.
-pub fn hide_for_settings(app: &AppHandle) {
+/// Hide for Settings or What's new: the app stays active, so the previous app never flashes.
+pub fn hide_for_window(app: &AppHandle) {
     apply(app, None, true, Visibility::hide);
 }
 
@@ -289,7 +289,7 @@ mod tests {
         assert_eq!(v.focus(false, at(2_001)), Step::Stay);
     }
     #[test]
-    fn give_back_leaves_focus_when_settings_is_open() {
+    fn give_back_leaves_focus_when_another_window_is_open() {
         assert_eq!(give_back(false, false), GiveBack::HideApp);
         assert_eq!(give_back(true, false), GiveBack::Stay);
         assert_eq!(give_back(false, true), GiveBack::Stay);

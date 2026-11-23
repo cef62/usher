@@ -6,16 +6,26 @@ use tauri::{AppHandle, Runtime, State};
 use usher_core::Command;
 
 use crate::engine::{EngineHandle, PanelView, REQUEST_TIMEOUT};
-use crate::{panel, settings, shell::LastView};
+use crate::{panel, settings, shell::LastView, whatsnew};
 
 pub const PANEL_COMMANDS: &[&str] = &[
     "get_view",
     "run_command",
     "hide_panel",
     "open_settings",
+    "open_whatsnew",
     "quit",
 ];
-pub const SETTINGS_COMMANDS: &[&str] = &["get_settings", "set_login", "set_debug", "reveal_log"];
+pub const SETTINGS_COMMANDS: &[&str] = &[
+    "get_settings",
+    "set_login",
+    "set_debug",
+    "reveal_log",
+    "set_update_check",
+    "check_update",
+    "open_whatsnew",
+];
+pub const WHATSNEW_COMMANDS: &[&str] = &["whatsnew_info", "whatsnew_install", "whatsnew_close"];
 
 /// Custom commands are open to every window (no app ACL manifest in build.rs, so capabilities do not restrict them):
 /// this is the boundary. A command missing from both lists is denied everywhere.
@@ -23,6 +33,7 @@ pub fn allowed(label: &str, command: &str) -> bool {
     match label {
         panel::LABEL => PANEL_COMMANDS.contains(&command),
         settings::LABEL => SETTINGS_COMMANDS.contains(&command),
+        whatsnew::LABEL => WHATSNEW_COMMANDS.contains(&command),
         _ => false,
     }
 }
@@ -77,15 +88,25 @@ mod tests {
     use super::*;
     #[test]
     fn each_window_calls_only_its_own_commands() {
-        for c in PANEL_COMMANDS {
-            assert!(allowed("panel", c));
-            assert!(!allowed("settings", c), "{c}");
+        let lists = [
+            ("panel", PANEL_COMMANDS),
+            ("settings", SETTINGS_COMMANDS),
+            ("whatsnew", WHATSNEW_COMMANDS),
+        ];
+        for (label, list) in lists {
+            for c in list {
+                assert!(allowed(label, c));
+                for (other, _) in lists {
+                    if other != label {
+                        // open_whatsnew is shared by the panel and Settings
+                        let shared = *c == "open_whatsnew" && other != "whatsnew";
+                        assert_eq!(allowed(other, c), shared, "{other} {c}");
+                    }
+                }
+            }
         }
-        for c in SETTINGS_COMMANDS {
-            assert!(allowed("settings", c));
-            assert!(!allowed("panel", c), "{c}");
-        }
-        assert!(!allowed("whatsnew", "get_view"));
+        assert!(!allowed("whatsnew", "get_view") && !allowed("whatsnew", "open_whatsnew"));
+        assert!(!allowed("panel", "whatsnew_install") && !allowed("", "quit"));
         assert!(!allowed("panel", "plugin:log|log"));
     }
 }

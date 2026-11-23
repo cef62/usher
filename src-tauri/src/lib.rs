@@ -11,6 +11,7 @@ mod shell;
 pub mod store;
 mod tray;
 pub mod update;
+mod whatsnew;
 
 use std::time::Duration;
 
@@ -102,7 +103,11 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             login::set_login,
             settings::set_debug,
             settings::reveal_log,
-            update::check_update
+            update::check_update,
+            whatsnew::open_whatsnew,
+            whatsnew::whatsnew_info,
+            whatsnew::whatsnew_install,
+            whatsnew::whatsnew_close
         ]))
 }
 
