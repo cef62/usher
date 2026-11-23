@@ -2,6 +2,7 @@
 
 mod instance;
 mod logging;
+pub mod store;
 mod tray;
 
 use tauri::Manager;
