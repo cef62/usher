@@ -3,6 +3,7 @@
 
 mod desired;
 mod guard;
+pub mod identity;
 mod model;
 mod reason;
 mod state;
