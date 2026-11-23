@@ -27,7 +27,7 @@ export function Panel() {
       const el = document.querySelector<HTMLElement>('[data-role="output"] .row-main[tabindex="0"]') ?? document.querySelector<HTMLElement>('input[role="switch"]');
       el?.focus();
     })];
-    void panelApi.getView().then((v) => v && apply(v));
+    void panelApi.getView().then((v) => v && setView((cur) => cur ?? v));
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape" && !e.defaultPrevented) void panelApi.hide(); };
     window.addEventListener("keydown", esc);
     const tick = setInterval(() => setNow(Date.now()), 30_000);

@@ -47,6 +47,7 @@ export function DeviceRow(p: RowProps) {
         {ranked && (
           <button
             ref={moreRef} type="button" className="more" aria-label={`Actions for ${row.name}`}
+            tabIndex={p.tabIndex} onMouseDown={(e) => e.preventDefault()}
             aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}
           >…</button>
         )}
@@ -82,7 +83,7 @@ function RowMenu(a: { p: RowProps; moreRef: React.RefObject<HTMLButtonElement | 
     }
   };
   return (
-    <div ref={ref} role="menu" className="menu" onKeyDown={key} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) a.close(); }}>
+    <div ref={ref} role="menu" className="menu" onKeyDown={key} onMouseDown={(e) => e.preventDefault()} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) a.close(); }}>
       <Item text="Move up" off={p.first} run={done(() => p.onMove(-1))} />
       <Item text="Move down" off={p.last} run={done(() => p.onMove(1))} />
       <Item text={p.row.neverUse ? "Use" : "Never use"} run={done(p.onNeverUse)} />

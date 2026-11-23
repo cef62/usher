@@ -55,7 +55,7 @@ h2 { margin: 10px 8px 2px; font-size: 11px; font-weight: 600; color: var(--fg-di
 .more { width: 26px; height: var(--row-h); color: var(--fg-dim); opacity: 0; }
 .row-line:hover .more, .more:focus-visible, .more[aria-expanded="true"] { opacity: 1; }
 
-.menu { position: absolute; right: 4px; top: calc(var(--row-h) - 2px); z-index: 5; min-width: 150px; padding: 4px; border-radius: 8px; background: Canvas; border: 1px solid var(--sep); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
+.menu { margin: 2px 4px 4px 28px; padding: 4px; border-radius: 8px; background: Canvas; border: 1px solid var(--sep); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
 .menu button { display: block; width: 100%; padding: 4px 8px; text-align: left; border-radius: 4px; }
 .menu button:hover, .menu button:focus-visible { background: var(--accent); color: #fff; outline: none; }
 .menu button[aria-disabled="true"] { opacity: 0.4; }

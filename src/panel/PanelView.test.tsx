@@ -132,3 +132,13 @@ test("no view yet reads the devices message and keeps Quit", () => {
   expect(root.textContent).toContain("Reading audio devices…");
   expect(button(root, "Quit")).toBeTruthy();
 });
+
+test("mousedown on the menu and on the … button keeps focus so a click lands", () => {
+  const { root } = mount(ui(v()));
+  const btn = menuButton(root, "Studio Display");
+  click(btn);
+  const down = (el: Element) => { const e = new MouseEvent("mousedown", { bubbles: true, cancelable: true }); act(() => void el.dispatchEvent(e)); return e; };
+  expect(down(menuItem(root, "Move down")!).defaultPrevented).toBe(true);
+  expect(down(btn).defaultPrevented).toBe(true);
+  expect(root.querySelector('[role="menu"]')).not.toBeNull();
+});

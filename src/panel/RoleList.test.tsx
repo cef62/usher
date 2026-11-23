@@ -39,6 +39,8 @@ test("one row per list is tabbable and it follows focus", () => {
   expect(tabbable(root)).toEqual(["A"]);
   rowButton(root, "A").focus(); key(document.activeElement!, "ArrowDown");
   expect(tabbable(root)).toEqual(["B"]);
+  const more = [...root.querySelectorAll<HTMLElement>(".more")].filter((b) => b.tabIndex === 0);
+  expect(more.map((b) => b.getAttribute("aria-label"))).toEqual(["Actions for B"]);
 });
 
 test("Alt+ArrowDown moves the focused row, keeps focus on it and announces it", () => {
@@ -93,9 +95,9 @@ test("a view that arrives mid-drag is used for the drop", async () => {
 });
 
 test("a refused command shows its text and the rows go back to the engine's order", async () => {
+  const view = { autoSwitch: true, debug: false, paused: null, readOnly: false, input: [], errors: { output: null, input: null }, output: abc() };
   const Harness = () => {
     const [error, setError] = useState<string | null>(null);
-    const view = { autoSwitch: true, debug: false, paused: null, readOnly: false, input: [], errors: { output: null, input: null }, output: abc() };
     const actions = {
       send: async () => { setError("the output list changed; reload and retry"); return false; },
       hide() {}, openSettings() {}, quit() {},
