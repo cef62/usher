@@ -6,6 +6,7 @@ mod desired;
 mod guard;
 pub mod identity;
 mod model;
+mod panel;
 mod reason;
 mod reconcile;
 mod remember;
@@ -18,6 +19,7 @@ pub use identity::Merge;
 #[doc(hidden)]
 pub use identity::merge_aliases;
 pub use model::*;
+pub use panel::*;
 pub use reason::*;
 pub use reconcile::*;
 #[doc(hidden)]
