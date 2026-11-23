@@ -72,7 +72,6 @@ pub(crate) fn rename(state: &mut State, from: &DeviceKey, to: &DeviceKey) {
 }
 
 /// Drop `key` from every structure, clearing `paused_reason` if it names it.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn remove(state: &mut State, key: &DeviceKey) {
     edit_keys(state, |k| if k == key { Edit::Drop } else { Edit::Keep });
 }

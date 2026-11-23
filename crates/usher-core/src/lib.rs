@@ -1,6 +1,7 @@
 //! Pure domain for usher; no I/O, no clock. Filled in M2.
 #![forbid(unsafe_code)]
 
+mod commands;
 mod desired;
 mod guard;
 pub mod identity;
@@ -10,6 +11,7 @@ mod reconcile;
 mod remember;
 mod seed;
 mod state;
+pub use commands::*;
 pub use desired::*;
 pub use guard::*;
 pub use identity::Merge;
