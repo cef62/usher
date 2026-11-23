@@ -87,6 +87,8 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     subscribed: bool,
     rebind_due: Option<Instant>,
     rebind_attempt: u32,
+    /// coreaudiod restarted and the rebind has not succeeded yet.
+    restarted: bool,
 }
 
 impl<A: AudioSystem, S: Shell> Engine<A, S> {
@@ -117,6 +119,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             subscribed: false,
             rebind_due: None,
             rebind_attempt: 0,
+            restarted: false,
         };
         e.attempt_bind(now);
         e.shell.auto_switch_changed(e.state.auto_switch);
@@ -129,7 +132,6 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             Event::Audio(a) => self.on_audio(a, now),
             Event::Command(c, reply) => {
                 let r = self.on_command(c, now);
-                self.shell.auto_switch_changed(self.state.auto_switch);
                 if let Some(tx) = reply {
                     let _ = tx.send(r);
                 }

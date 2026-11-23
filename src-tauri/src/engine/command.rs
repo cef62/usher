@@ -5,7 +5,7 @@ use std::sync::mpsc::Sender;
 use std::time::Instant;
 
 use log::{info, warn};
-use usher_core::{Command, CommandError, apply};
+use usher_core::{Command, CommandError, DeviceKey, PerRole, apply};
 use usher_coreaudio::AudioSystem;
 
 use super::{Engine, Shell};
@@ -45,16 +45,18 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         };
         // a Forget now could race the pending rebind scan, which would re-add the device
         if matches!(cmd, Command::Forget { .. }) && self.rebinding() {
+            warn!("forget refused: rebinding");
             return Err(Refusal::Rebinding);
         }
-        let was_on = self.state.auto_switch;
+        let (was_on, was_debug) = (self.state.auto_switch, self.state.debug);
+        let forgot = match &cmd {
+            Command::Forget { key } => Some((self.name_of(snap, key), key.clone())),
+            _ => None,
+        };
         match apply(&mut self.state, &mut self.rt, snap, cmd) {
             Ok(true) => {
                 self.store.mark_dirty(now);
-                if was_on != self.state.auto_switch {
-                    let on = self.state.auto_switch;
-                    info!("auto-switch {}", if on { "on" } else { "off" });
-                }
+                self.announce(was_on, was_debug, forgot);
                 self.emit();
                 self.schedule_reconcile(now);
                 Ok(())
@@ -64,6 +66,27 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 warn!("command rejected: {e}");
                 Err(Refusal::Rejected(e))
             }
+        }
+    }
+
+    /// Log and tell the shell about what the command changed.
+    fn announce(&mut self, was_on: bool, was_debug: bool, forgot: Option<(String, DeviceKey)>) {
+        let word = |b: bool| if b { "on" } else { "off" };
+        if was_on != self.state.auto_switch {
+            let on = self.state.auto_switch;
+            info!("auto-switch {}", word(on));
+            self.shell.auto_switch_changed(on);
+            if !on {
+                self.errors = PerRole::default();
+            }
+        }
+        if was_debug != self.state.debug {
+            let on = self.state.debug;
+            info!("debug logging {}", word(on));
+            self.shell.debug_changed(on);
+        }
+        if let Some((name, key)) = forgot {
+            info!("forgot {name} ({key})");
         }
     }
 }

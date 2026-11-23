@@ -15,6 +15,12 @@ pub fn retry_delay(attempt: u32) -> Duration {
     })
 }
 
+/// The log line for a failed bind attempt: launch failures and rebinds read differently.
+pub(super) fn retry_line(restarted: bool, why: &str, d: Duration) -> String {
+    let what = if restarted { "rebind" } else { "audio setup" };
+    format!("{what} failed: {why}; next try in {}s", d.as_secs())
+}
+
 impl<A: AudioSystem, S: Shell> Engine<A, S> {
     /// True while a rebind deadline is pending.
     pub fn rebinding(&self) -> bool {
@@ -24,6 +30,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     pub(super) fn begin_rebind(&mut self, now: Instant) {
         info!("coreaudiod restarted; rebinding");
         self.rebind_attempt = 0;
+        self.restarted = true;
         self.rebind_due = Some(now);
         self.reconcile_due = None;
         // devices may have changed during the restart; the post-rebind scan may schedule a fresh recheck
@@ -51,11 +58,12 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 info!("rebound after {} attempt(s)", n + 1);
             }
             self.rebind_attempt = 0;
+            self.restarted = false;
             return;
         }
         let d = retry_delay(n);
         let why = result.err().unwrap_or_else(|| "scan failed".into());
-        warn!("rebind failed: {why}; next try in {d:?}");
+        warn!("{}", retry_line(self.restarted, &why, d));
         self.rebind_due = Some(now + d);
         self.rebind_attempt = n + 1;
     }
@@ -77,5 +85,21 @@ mod tests {
         let secs: Vec<u64> = (0..8).map(|a| retry_delay(a).as_secs()).collect();
         assert_eq!(secs, vec![1, 2, 4, 8, 16, 60, 60, 60]);
         assert_eq!(retry_delay(u32::MAX), Duration::from_secs(60));
+    }
+
+    #[test]
+    fn retry_line_names_launch_or_rebind() {
+        assert_eq!(
+            retry_line(
+                false,
+                "subscribe failed (OSStatus -1)",
+                Duration::from_secs(1)
+            ),
+            "audio setup failed: subscribe failed (OSStatus -1); next try in 1s"
+        );
+        assert_eq!(
+            retry_line(true, "scan failed", Duration::from_secs(60)),
+            "rebind failed: scan failed; next try in 60s"
+        );
     }
 }
