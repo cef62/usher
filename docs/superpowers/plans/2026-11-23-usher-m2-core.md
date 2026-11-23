@@ -1,34 +1,34 @@
-# cue M2: core domain Implementation Plan
+# usher M2: core domain Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build `crates/cue-core` (lib `cue_core`), a pure, fully tested Rust crate that holds every rule in spec §5 that is logic rather than I/O.
+**Goal:** Build `crates/usher-core` (lib `usher_core`), a pure, fully tested Rust crate that holds every rule in spec §5 that is logic rather than I/O.
 
 **Architecture:** The engine (M3) owns one `State` (persisted) and one `Runtime` (in memory). On every coalesced event it hands core a `Snapshot` of CoreAudio, and `reconcile()` mutates `State` and returns the `Action`s to execute plus one `Reason` per role. UI commands are pure transitions on the same `State`. `panel_state()` renders the view model. All UID rewriting goes through one registry module (`identity/registry.rs`), which alias merge and forget both use.
 
 **Tech Stack:** Rust (workspace edition from M1), `serde` (derive), `serde_json`. Nothing else.
 
-**Spec:** `docs/superpowers/specs/2026-11-23-cue-design.md` (§5, §6, §9). Also read `docs/adr/0003-strict-priority-policy.md`, `docs/adr/0004-logging-and-debug-mode.md`, and `docs/audit/core-audio-and-switching.md` §3.3, §5, §6, §7.
+**Spec:** `docs/superpowers/specs/2026-11-23-usher-design.md` (§5, §6, §9). Also read `docs/adr/0003-strict-priority-policy.md`, `docs/adr/0004-logging-and-debug-mode.md`, and `docs/audit/core-audio-and-switching.md` §3.3, §5, §6, §7.
 
-**Branch:** `m2-core`, off `main` after M1 merged. Assumes M1 created `crates/cue-core` as an empty lib in the workspace and `clippy.toml` with `too-many-lines-threshold = 40`.
+**Branch:** `m2-core`, off `main` after M1 merged. Assumes M1 created `crates/usher-core` as an empty lib in the workspace and `clippy.toml` with `too-many-lines-threshold = 40`.
 
 ## Global Constraints
 
-- `crates/cue-core/src/lib.rs` starts with `#![forbid(unsafe_code)]`.
+- `crates/usher-core/src/lib.rs` starts with `#![forbid(unsafe_code)]`.
 - Dependencies: `serde = { version = "1", features = ["derive"] }`, `serde_json = "1"`. No `thiserror` (two small error enums get a hand-written `Display`), no `log`, no tauri, no objc2.
 - No I/O, no clock, no logging in core. Time is injected as `Timestamp` (ms since the Unix epoch).
 - Every non-test file is 300 lines or fewer, as measured by `pnpm check:size` (M1: lines from the first bare `#[cfg(test)]` line are not counted). Every function is 40 lines or fewer.
 - Nothing is keyed or persisted by `AudioObjectID`. The only key is `DeviceKey` (the CoreAudio device UID).
 - State file: `schema_version: 1`, snake_case keys, unknown top-level keys preserved.
 - Loop guard: 3 corrective writes per role in a sliding 10 s window (`10_000` ms).
-- Notification and panel copy: `cue paused auto-switch: <device> kept taking <role>`, where `<role>` is `output` or `input`.
-- Unit tests for private logic go inline (`#[cfg(test)] mod tests`). Behaviour tests go in `crates/cue-core/tests/*.rs` against the public API, sharing `tests/common/mod.rs`.
-- Quality gate for this crate: `cargo test -p cue-core`, `cargo clippy -p cue-core --all-targets -- -D warnings`, `cargo fmt --all --check`.
+- Notification and panel copy: `usher paused auto-switch: <device> kept taking <role>`, where `<role>` is `output` or `input`.
+- Unit tests for private logic go inline (`#[cfg(test)] mod tests`). Behaviour tests go in `crates/usher-core/tests/*.rs` against the public API, sharing `tests/common/mod.rs`.
+- Quality gate for this crate: `cargo test -p usher-core`, `cargo clippy -p usher-core --all-targets -- -D warnings`, `cargo fmt --all --check`.
 
 ## Review Focus
 
 1. **The current default is not a ranked device, or there is none** (hidden device, not-alive device, `current = None`). Expected: no panic, `Reason.current` reports it, a desired device is still set, and the panel shows the current hidden device as an unranked row. Pinned in Task 3 (`current_none_still_sets_desired`) and Task 11 (`hidden_current_default_is_shown_unranked`).
-2. **A state file from a newer cue** (`schema_version: 2`). Expected: an error, never a silent downgrade that drops keys. Pinned in Task 2 (`newer_schema_is_rejected`).
+2. **A state file from a newer usher** (`schema_version: 2`). Expected: an error, never a silent downgrade that drops keys. Pinned in Task 2 (`newer_schema_is_rejected`).
 3. **A stale reorder from the panel** (a device connected or was forgotten between render and drop). Expected: the command is refused and the stored order is untouched (spec bug #25). Pinned in Task 10 (`reorder_with_stale_list_is_refused`).
 4. **Ordinary topology churn tripping the loop guard** (a dock brings three devices at once; reconcile runs several times). Expected: writes happen only when `desired != current`, so one write per role and no trip. Pinned in Task 8 (`dock_connect_writes_once_and_does_not_trip`).
 5. **A virtual device that is the macOS default at first launch** (BlackHole selected as output). Expected: seeding ranks it first and does not flag it "never use", so the first reconcile does nothing. Pinned in Task 9 (`virtual_current_default_is_not_flagged_at_seed`).
@@ -39,7 +39,7 @@
 
 | File | Responsibility | Budget |
 |---|---|---|
-| `crates/cue-core/Cargo.toml` | add serde, serde_json | |
+| `crates/usher-core/Cargo.toml` | add serde, serde_json | |
 | `src/lib.rs` | `forbid(unsafe_code)`, module tree, re-exports | 30 |
 | `src/model.rs` | `Role`, `PerRole`, `DeviceKey`, `Timestamp`, `Transport`, `DeviceSnapshot`, `Snapshot` | 150 |
 | `src/state.rs` | `State`, `RoleList`, `DeviceRecord`, `PausedReason`, `from_json`, `to_json`, `StateError` | 200 |
@@ -57,7 +57,7 @@
 | `tests/common/mod.rs` | fixtures shared by behaviour tests | — |
 | `tests/{state,desired,new_devices,alias,reconcile,seed,commands,panel}.rs` | behaviour tests | — |
 
-All paths below are relative to `crates/cue-core/` unless they start with `docs/`.
+All paths below are relative to `crates/usher-core/` unless they start with `docs/`.
 
 ## Ported scenarios (audit §5)
 
@@ -66,7 +66,7 @@ Kept, adapted to the strict policy: startup picks top per role; top device conne
 Dropped, and why:
 
 - All kept-pick scenarios (`aPickInControlCenterStays…`, `aPickInThePanelStays…`, `onlyADeviceTheListWouldUseEnds…`, `reorderingTheActiveMicrophoneListClearsAKeptPick`, `…IsHeldInManualMode`, `aSlowAirPodsHandover…`, `aControlCenterWindowWhileAirPodsConnect…`): ADR 0003 removes picks. Click-to-promote replaces them (Task 10).
-- Manual-mode AirPods scenarios: with auto off, strict cue does nothing.
+- Manual-mode AirPods scenarios: with auto off, strict usher does nothing.
 - Echo/ordering timing scenarios (`deviceCallbackBeforeDefaultCallback…`, `outputMovingBeforeTheDisconnectArrives…`): strict reconcile is stateless per snapshot; one echo test covers them.
 - Pairing, follow-output, speaker/headphone categories, mute, profiles, display hide-once, legacy migrations, forgotten-Bluetooth relisting, Shortcuts redirect, dongle-check deferral: not in the v1 keep set.
 - `forgettingOneRolePreservesTheOther`: v1 forget is device-wide (spec §5.8 "every UID-bearing structure").
@@ -122,10 +122,10 @@ Decision: there is no `display_uuid` field. Core parses the display UUID from th
 }
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test model` — Expected: FAIL, `unresolved import cue_core::Role` (or similar).
+- [ ] **Step 2: Run** `cargo test -p usher-core --test model` — Expected: FAIL, `unresolved import usher_core::Role` (or similar).
 - [ ] **Step 3: Add deps to `Cargo.toml`, implement `src/model.rs`, declare and re-export it from `src/lib.rs`** (with `#![forbid(unsafe_code)]`).
-- [ ] **Step 4: Run** `cargo test -p cue-core --test model` — Expected: 5 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): device model and snapshot types"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test model` — Expected: 5 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): device model and snapshot types"`
 
 ---
 
@@ -140,7 +140,7 @@ Decision: there is no `display_uuid` field. Core parses the display UUID from th
   - `pub const SCHEMA_VERSION: u32 = 1;`
   - `pub struct RoleList { pub order: Vec<DeviceKey>, pub never_use: BTreeSet<DeviceKey> }` (`Default`).
   - `pub struct DeviceRecord { pub name: String, pub transport: Transport, pub roles: BTreeSet<Role>, pub last_seen: Option<Timestamp>, pub family: Option<String> }`. `family` is set only once a device was verified port-dependent (serial-less USB or display); it is what lets an offline record donate its settings.
-  - `pub struct PausedReason { pub role: Role, pub key: DeviceKey, pub name: String }`; `fn message(&self) -> String` returns `cue paused auto-switch: {name} kept taking {role}`.
+  - `pub struct PausedReason { pub role: Role, pub key: DeviceKey, pub name: String }`; `fn message(&self) -> String` returns `usher paused auto-switch: {name} kept taking {role}`.
   - `pub struct State { pub schema_version: u32, pub auto_switch: bool, pub debug: bool, pub paused_reason: Option<PausedReason>, pub output: RoleList, pub input: RoleList, pub devices: BTreeMap<DeviceKey, DeviceRecord>, pub ambiguous_families: BTreeSet<String>, #[serde(flatten)] pub extra: serde_json::Map<String, Value> }`, `#[serde(default)]`, `Clone, PartialEq, Debug`. `Default`: version 1, `auto_switch: true`, rest empty.
   - `fn list(&self, Role) -> &RoleList`; `fn list_mut(&mut self, Role) -> &mut RoleList`.
   - `pub enum StateError { Corrupt(String), UnsupportedVersion(u32) }` with `Display` and `std::error::Error`.
@@ -181,14 +181,14 @@ const FILE: &str = r#"{"schema_version":1,"auto_switch":false,"debug":true,
 }
 #[test] fn paused_message_copy() {
     let p = PausedReason { role: Role::Input, key: key("a"), name: "AirPods".into() };
-    assert_eq!(p.message(), "cue paused auto-switch: AirPods kept taking input");
+    assert_eq!(p.message(), "usher paused auto-switch: AirPods kept taking input");
 }
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test state` — Expected: FAIL, unresolved imports.
+- [ ] **Step 2: Run** `cargo test -p usher-core --test state` — Expected: FAIL, unresolved imports.
 - [ ] **Step 3: Implement `src/state.rs`**, re-export from `lib.rs`. `extra` must be the last field (the flatten map takes whatever the named fields left).
-- [ ] **Step 4: Run** `cargo test -p cue-core --test state` — Expected: 6 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): state schema v1 with unknown-key preservation"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test state` — Expected: 6 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): state schema v1 with unknown-key preservation"`
 
 ---
 
@@ -223,10 +223,10 @@ Rule (spec §5.2): walk `order(role)`; the first key that is connected, alive, h
 }
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test desired` — Expected: FAIL, unresolved imports.
+- [ ] **Step 2: Run** `cargo test -p usher-core --test desired` — Expected: FAIL, unresolved imports.
 - [ ] **Step 3: Implement `src/reason.rs` and `decide()` in `src/desired.rs`**; a private `fn skip_cause(...) -> Option<Skip>` keeps `decide` short.
-- [ ] **Step 4: Run** `cargo test -p cue-core --test desired` — Expected: 7 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): desired default with skip reasons"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test desired` — Expected: 7 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): desired default with skip reasons"`
 
 ---
 
@@ -249,10 +249,10 @@ Rule (spec §5.2): walk `order(role)`; the first key that is connected, alive, h
 #[test] fn clock_step_back_does_not_panic()     // record at 10_000 then at 0 → no panic
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core guard` — Expected: FAIL (module missing).
+- [ ] **Step 2: Run** `cargo test -p usher-core guard` — Expected: FAIL (module missing).
 - [ ] **Step 3: Implement `src/guard.rs`**; re-export `LoopGuard`.
-- [ ] **Step 4: Run** `cargo test -p cue-core guard` — Expected: 5 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): per-role sliding-window loop guard"`
+- [ ] **Step 4: Run** `cargo test -p usher-core guard` — Expected: 5 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): per-role sliding-window loop guard"`
 
 ---
 
@@ -284,10 +284,10 @@ Rule (spec §5.2): walk `order(role)`; the first key that is connected, alive, h
 // Hdmi with display uid → Some; Usb transport with display uid → None
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core identity::tests` — Expected: FAIL.
+- [ ] **Step 2: Run** `cargo test -p usher-core identity::tests` — Expected: FAIL.
 - [ ] **Step 3: Implement `parse_port` (split into `parse_usb` and `parse_display`) and `alias_identity`.**
-- [ ] **Step 4: Run** `cargo test -p cue-core identity::tests` — Expected: 6 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): port identity parsing for USB and display UIDs"`
+- [ ] **Step 4: Run** `cargo test -p usher-core identity::tests` — Expected: 6 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): port identity parsing for USB and display UIDs"`
 
 ---
 
@@ -319,10 +319,10 @@ Rule (spec §5.2): walk `order(role)`; the first key that is connected, alive, h
 
 The two "no trace" tests serialise the whole state, so a future UID field missed by the registry fails them once a fixture sets it.
 
-- [ ] **Step 2: Run** `cargo test -p cue-core registry` — Expected: FAIL.
+- [ ] **Step 2: Run** `cargo test -p usher-core registry` — Expected: FAIL.
 - [ ] **Step 3: Implement `src/identity/registry.rs`.**
-- [ ] **Step 4: Run** `cargo test -p cue-core registry` — Expected: 5 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): one registry of UID-bearing structures"`
+- [ ] **Step 4: Run** `cargo test -p usher-core registry` — Expected: 5 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): one registry of UID-bearing structures"`
 
 ---
 
@@ -353,10 +353,10 @@ The two "no trace" tests serialise the whole state, so a future UID field missed
 // usb uid with serialless true → family Some("AppleUSBAudioEngine:Shure:MV7"); same uid with false → still Some
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test new_devices` — Expected: FAIL.
+- [ ] **Step 2: Run** `cargo test -p usher-core --test new_devices` — Expected: FAIL.
 - [ ] **Step 3: Implement `src/remember.rs`** (`append_new`, `upsert_record`, `stamp_last_seen` as private helpers).
-- [ ] **Step 4: Run** `cargo test -p cue-core --test new_devices` — Expected: 8 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): append new devices and track last seen"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test new_devices` — Expected: 8 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): append new devices and track last seen"`
 
 ---
 
@@ -397,10 +397,10 @@ Run before `remember`, so a donor's record and rank move to the new UID before t
 #[test] fn different_endpoint_is_not_merged()            // ":1" vs ":2" endpoints → no merge
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test alias` — Expected: FAIL.
+- [ ] **Step 2: Run** `cargo test -p usher-core --test alias` — Expected: FAIL.
 - [ ] **Step 3: Implement `src/identity/alias.rs`** (`latch_ambiguous`, `donors_for` as helpers).
-- [ ] **Step 4: Run** `cargo test -p cue-core --test alias` — Expected: 10 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): alias merge with ambiguity latch"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test alias` — Expected: 10 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): alias merge with ambiguity latch"`
 
 ---
 
@@ -442,7 +442,7 @@ Decision: the 3rd corrective write is replaced by the pause, not issued. The dev
 #[test] fn outside_change_is_reverted_and_auto_stays_on()
 #[test] fn fast_fight_trips_the_guard()
 // writes at T0, T0+1_000 → SetDefault; at T0+2_000 → PauseAuto{Input, airpods}, no SetDefault;
-// state.auto_switch false; paused_reason.message() == "cue paused auto-switch: airpods kept taking input"
+// state.auto_switch false; paused_reason.message() == "usher paused auto-switch: airpods kept taking input"
 #[test] fn dock_connect_writes_once_and_does_not_trip()
 // three reconciles with the same snapshot after one write: current == desired → only one SetDefault total; auto stays on
 #[test] fn persist_only_when_state_changes()           // second identical reconcile → no Persist
@@ -460,10 +460,10 @@ and in `tests/seed.rs`
 #[test] fn seed_starts_with_auto_switch_on()
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test reconcile --test seed` — Expected: FAIL, unresolved imports.
+- [ ] **Step 2: Run** `cargo test -p usher-core --test reconcile --test seed` — Expected: FAIL, unresolved imports.
 - [ ] **Step 3: Implement `src/reconcile.rs`** (`fn correct(state, rt, snap, reason, now) -> Option<Action>` keeps `reconcile` under 40 lines) **and `src/seed.rs`.**
-- [ ] **Step 4: Run** `cargo test -p cue-core --test reconcile --test seed` — Expected: 15 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): reconcile with actions, reasons, guard and seeding"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test reconcile --test seed` — Expected: 15 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): reconcile with actions, reasons, guard and seeding"`
 
 ---
 
@@ -505,10 +505,10 @@ Semantics:
 #[test] fn set_debug_persists_flag()
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test commands` — Expected: FAIL.
+- [ ] **Step 2: Run** `cargo test -p usher-core --test commands` — Expected: FAIL.
 - [ ] **Step 3: Implement `src/commands.rs`** (one private fn per command arm).
-- [ ] **Step 4: Run** `cargo test -p cue-core --test commands` — Expected: 11 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): panel commands as pure state transitions"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test commands` — Expected: 11 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): panel commands as pure state transitions"`
 
 ---
 
@@ -540,10 +540,10 @@ Rows: every key in `order(role)`, `rank` 1-based. `name` from the snapshot if co
 }
 ```
 
-- [ ] **Step 2: Run** `cargo test -p cue-core --test panel` — Expected: FAIL.
+- [ ] **Step 2: Run** `cargo test -p usher-core --test panel` — Expected: FAIL.
 - [ ] **Step 3: Implement `src/panel.rs`** (`fn rows(state, snap, role) -> Vec<PanelRow>`).
-- [ ] **Step 4: Run** `cargo test -p cue-core --test panel` — Expected: 6 passed.
-- [ ] **Step 5: Commit** `git add crates/cue-core && git commit -m "feat(core): panel view model"`
+- [ ] **Step 4: Run** `cargo test -p usher-core --test panel` — Expected: 6 passed.
+- [ ] **Step 5: Commit** `git add crates/usher-core && git commit -m "feat(core): panel view model"`
 
 ---
 
@@ -552,12 +552,12 @@ Rows: every key in `order(role)`, `rank` 1-based. `name` from the snapshot if co
 **Files:**
 - Modify: `src/lib.rs` (final re-exports; crate doc comment naming the M3 contract: `Snapshot` in, `Outcome` and `PanelState` out)
 
-- [ ] **Step 1: Run** `cargo test -p cue-core` — Expected: all tests pass, 0 failed.
-- [ ] **Step 2: Run** `cargo clippy -p cue-core --all-targets -- -D warnings` — Expected: no warnings (this enforces the 40-line function limit).
+- [ ] **Step 1: Run** `cargo test -p usher-core` — Expected: all tests pass, 0 failed.
+- [ ] **Step 2: Run** `cargo clippy -p usher-core --all-targets -- -D warnings` — Expected: no warnings (this enforces the 40-line function limit).
 - [ ] **Step 3: Run** `cargo fmt --all --check` — Expected: no output.
-- [ ] **Step 4: Run** `pnpm check:size` — Expected: pass; no file under `crates/cue-core/src` over 300 lines.
-- [ ] **Step 5: Run** `cargo tree -p cue-core --edges normal --depth 1` — Expected: only `serde` and `serde_json`.
-- [ ] **Step 6: Commit** `git add crates/cue-core && git commit -m "chore(core): finalize public API"` and open the M2 PR following the hop workflow (quality gate, adversarial review).
+- [ ] **Step 4: Run** `pnpm check:size` — Expected: pass; no file under `crates/usher-core/src` over 300 lines.
+- [ ] **Step 5: Run** `cargo tree -p usher-core --edges normal --depth 1` — Expected: only `serde` and `serde_json`.
+- [ ] **Step 6: Commit** `git add crates/usher-core && git commit -m "chore(core): finalize public API"` and open the M2 PR following the hop workflow (quality gate, adversarial review).
 
 ---
 

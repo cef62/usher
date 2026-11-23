@@ -1,6 +1,6 @@
-# cue architecture overview
+# usher architecture overview
 
-The design rationale is in `docs/superpowers/specs/2026-11-23-cue-design.md`. The decisions are in `docs/adr/`.
+The design rationale is in `docs/superpowers/specs/2026-11-23-usher-design.md`. The decisions are in `docs/adr/`.
 
 ## Components
 
@@ -12,19 +12,19 @@ flowchart LR
     TRAY[Menu bar]
   end
 
-  subgraph coreaudio["crates/cue-coreaudio (only unsafe)"]
+  subgraph coreaudio["crates/usher-coreaudio (only unsafe)"]
     SYS[CoreAudioSystem<br/>impl AudioSystem]
     LIS[Listener callbacks]
   end
 
-  subgraph core["crates/cue-core (pure)"]
+  subgraph core["crates/usher-core (pure)"]
     POL[desired / reconcile]
     GUARD[LoopGuard]
     ID[Identity + alias registry]
     ST[State serde]
   end
 
-  subgraph app["src-tauri (cue)"]
+  subgraph app["src-tauri (usher)"]
     ENG[Engine thread<br/>owns state]
     STORE[Store<br/>atomic JSON]
     SHELL[Tray + Panel + Settings<br/>Login + Updater + WhatsNew]
@@ -58,7 +58,7 @@ sequenceDiagram
   participant CA as coreaudiod
   participant L as Listener (CoreAudio thread)
   participant E as Engine thread
-  participant C as cue-core
+  participant C as usher-core
   participant S as AudioSystem
   participant UI as Panel
 
@@ -102,7 +102,7 @@ stateDiagram-v2
 
 | Rule | Enforced by |
 |---|---|
-| `unsafe` only in `cue-coreaudio` | `#![forbid(unsafe_code)]` in the other crates |
-| `cue-core` has no I/O, no clock, no tauri/objc2 | Cargo deps; time is passed in |
+| `unsafe` only in `usher-coreaudio` | `#![forbid(unsafe_code)]` in the other crates |
+| `usher-core` has no I/O, no clock, no tauri/objc2 | Cargo deps; time is passed in |
 | Files ≤ 300 lines, functions ≤ 40 lines (non-test) | `scripts/check-size.mjs`, `clippy::too_many_lines` |
 | Mutable state has one owner (engine thread) | Design; UI sends commands only |

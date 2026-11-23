@@ -1,8 +1,8 @@
-# cue: design
+# usher: design
 
 - Date: 2026-11-23
 - Status: Approved by owner 2026-11-23
-- Repo: `cef62/cue` · bundle id `com.cef62.cue` · working dir `/Volumes/Dev/matteo/macos-audio-priority`
+- Repo: `cef62/usher` · bundle id `com.cef62.usher` · working dir `/Volumes/Dev/matteo/macos-audio-priority`
 
 Marks used below:
 
@@ -11,7 +11,7 @@ Marks used below:
 
 ## 1. Intent
 
-cue is a macOS menu-bar app. It keeps the default output and input audio devices on the owner's
+usher is a macOS menu-bar app. It keeps the default output and input audio devices on the owner's
 preferred device: the highest-ranked device in a priority list that is currently connected.
 
 The owner uses camguillory/Audio-Priority-Bar day to day (`docs/audit/`). That app works, but it has
@@ -20,7 +20,7 @@ two problems:
 - It has grown to about 20k LOC, with a 2,200-line app class.
 - It relies on fragile heuristics to guess who changed a device.
 
-cue is a from-scratch rewrite with three aims:
+usher is a from-scratch rewrite with three aims:
 
 - Do the core job only.
 - Use a strict, predictable switching rule.
@@ -97,16 +97,16 @@ desired(role) = first key in order(role) that is
 
 Rules for applying it:
 
-- If no device qualifies, cue does nothing and leaves the macOS choice in place.
-- When auto-switch is on and `desired != current`, cue sets the default.
-- For `Output`, cue also sets `kAudioHardwarePropertyDefaultSystemOutputDevice`, so alerts follow
+- If no device qualifies, usher does nothing and leaves the macOS choice in place.
+- When auto-switch is on and `desired != current`, usher sets the default.
+- For `Output`, usher also sets `kAudioHardwarePropertyDefaultSystemOutputDevice`, so alerts follow
   the output **(call; fixes fork bug 11)**.
-- cue checks the status of `AudioObjectSetPropertyData`. A failure is logged and shown as an error
-  line in the panel. cue does not retry within the same event.
+- usher checks the status of `AudioObjectSetPropertyData`. A failure is logged and shown as an error
+  line in the panel. usher does not retry within the same event.
 
 ### 5.3 When it runs
 
-cue runs `reconcile()` after any of these events, coalesced over 150 ms **(call)**:
+usher runs `reconcile()` after any of these events, coalesced over 150 ms **(call)**:
 
 - launch;
 - device list changed;
@@ -117,16 +117,16 @@ cue runs `reconcile()` after any of these events, coalesced over 150 ms **(call)
 Our own write fires a default-changed event. The next reconcile finds `desired == current` and does
 nothing, so no echo tracking is needed.
 
-When AirPods take the mic on connect, the event fires and cue reverts it to the top-ranked mic. That
+When AirPods take the mic on connect, the event fires and usher reverts it to the top-ranked mic. That
 is goal 7.
 
 ### 5.4 Loop guard (ADR 0003)
 
-- cue counts its own corrective writes per role in a sliding 10 s window, using an injected clock.
+- usher counts its own corrective writes per role in a sliding 10 s window, using an injected clock.
 - On the 3rd write in that window it does three things:
   - turns auto-switch off and persists that;
   - switches the icon to its off state;
-  - posts a notification: "cue paused auto-switch: <device> kept taking <role>".
+  - posts a notification: "usher paused auto-switch: <device> kept taking <role>".
 - The count resets when the user turns auto-switch back on.
 - The state also stores `paused_reason`, which the panel shows as a persistent line until the user
   turns auto-switch back on. This way the reason is visible even if notifications are denied
@@ -158,14 +158,14 @@ An alias layer follows the fork's verified algorithm (`docs/audit/core-audio-and
 
 ### 5.7 Persistence
 
-- One JSON file at `~/Library/Application Support/com.cef62.cue/state.json` **(call)**, with
+- One JSON file at `~/Library/Application Support/com.cef62.usher/state.json` **(call)**, with
   `schema_version: 1`.
 - The file holds:
   - `auto_switch`;
   - per role: `order` and `never_use`;
   - `devices` (key → name, transport, roles, last_seen, alias family);
   - `ambiguous_families`.
-- Writes are atomic: a temp file followed by a rename. A corrupt file is moved aside and cue starts
+- Writes are atomic: a temp file followed by a rename. A corrupt file is moved aside and usher starts
   fresh. Unknown keys are preserved. All of this follows hop's `settings.rs` pattern.
 - Writes are debounced at 500 ms and flushed on quit. `last_seen` updates only on disconnect, and
   at launch for connected devices.
@@ -180,20 +180,20 @@ An alias layer follows the fork's verified algorithm (`docs/audit/core-audio-and
 
 ### 5.9 coreaudiod restart
 
-- cue listens for `kAudioHardwarePropertyServiceRestarted`.
+- usher listens for `kAudioHardwarePropertyServiceRestarted`.
 - On that event it removes all listeners, re-adds them and re-enumerates.
 - If a step fails, it retries after 1, 2, 4, 8 and 16 s, then every 60 s forever (fixes fork bug 2).
 
 ### 5.10 First launch
 
-When no state file exists **(call)**, cue seeds the lists as follows:
+When no state file exists **(call)**, usher seeds the lists as follows:
 
 - The **current macOS default** for each role goes first.
 - The other devices follow in enumeration order. Virtual and aggregate devices are flagged
   "never use".
 - Auto-switch starts **on**.
 
-Because the current default is ranked first, the first reconcile does nothing. cue never switches
+Because the current default is ranked first, the first reconcile does nothing. usher never switches
 your audio just because it was launched.
 
 ### 5.11 Logging and debug mode (owner; details are calls, ADR 0004)
@@ -201,12 +201,12 @@ your audio just because it was launched.
 **Where logs go**
 
 - All Rust code logs through the `log` facade, and `tauri-plugin-log` writes the output.
-- The log file is `~/Library/Logs/com.cef62.cue/cue.log`. It rotates at 1 MB and keeps 5 files.
+- The log file is `~/Library/Logs/com.cef62.usher/usher.log`. It rotates at 1 MB and keeps 5 files.
 - The frontend's `console` output is forwarded to the same file.
 
 **Keeping core pure**
 
-- `cue-core` does no I/O. `reconcile()` returns its actions together with a `Vec<Reason>`: for each
+- `usher-core` does no I/O. `reconcile()` returns its actions together with a `Vec<Reason>`: for each
   role, the desired device, the current device, and why each higher-ranked device was skipped
   (disconnected, not alive, never use, no streams).
 - The engine is what logs these reasons.
@@ -223,7 +223,7 @@ your audio just because it was launched.
 
 Errors go at `error`, unexpected but recovered cases at `warn`.
 
-**Debug mode adds (debug, cue crates only)**
+**Debug mode adds (debug, usher crates only)**
 
 - every raw CoreAudio event, and how events were coalesced;
 - a full device snapshot on each enumeration: UID, name, transport, alive, hidden, stream counts per
@@ -236,7 +236,7 @@ Errors go at `error`, unexpected but recovered cases at `warn`.
 
 - A "Debug logging" toggle in Settings, persisted in state. It changes the level at runtime, without
   a restart.
-- The `CUE_LOG=debug` environment variable, for development.
+- The `USHER_LOG=debug` environment variable, for development.
 - Debug builds default to debug.
 
 **Panel and Settings**
@@ -260,15 +260,15 @@ React frontend **(call)**:
 
 | Unit | Contents | Depends on |
 |---|---|---|
-| `crates/cue-core` | Pure domain: `Device`, `Role`, `DeviceKey`, `Prefs`, `desired()`, `reconcile()` returning `Vec<Action>`, the loop guard, the alias and forget registry, state (de)serialisation. No I/O, no clock (injected). | serde |
-| `crates/cue-coreaudio` | The only `unsafe`. Implements the `AudioSystem` trait: enumerate, read default, set default, subscribe to events, IOKit serial check. Converts CoreAudio callbacks into `Event`s on an mpsc channel. | objc2-core-audio 0.3.x, objc2-io-kit |
-| `src-tauri` (app `cue`) | The engine thread owns state: it receives `Event`s, debounces, calls core, applies `Action`s through `AudioSystem`, persists, and emits `state-changed` to the UI. Also the tray, the panel window, settings, login, the updater and What's new (adapted from hop). | tauri 2, core, coreaudio |
+| `crates/usher-core` | Pure domain: `Device`, `Role`, `DeviceKey`, `Prefs`, `desired()`, `reconcile()` returning `Vec<Action>`, the loop guard, the alias and forget registry, state (de)serialisation. No I/O, no clock (injected). | serde |
+| `crates/usher-coreaudio` | The only `unsafe`. Implements the `AudioSystem` trait: enumerate, read default, set default, subscribe to events, IOKit serial check. Converts CoreAudio callbacks into `Event`s on an mpsc channel. | objc2-core-audio 0.3.x, objc2-io-kit |
+| `src-tauri` (app `usher`) | The engine thread owns state: it receives `Event`s, debounces, calls core, applies `Action`s through `AudioSystem`, persists, and emits `state-changed` to the UI. Also the tray, the panel window, settings, login, the updater and What's new (adapted from hop). | tauri 2, core, coreaudio |
 | `src/` (React 19) | Panel UI: two lists, drag (dnd-kit **(call)**), row menu, toggle. Settings and What's new windows. Plain CSS variables, as in hop. | |
 
 Rules:
 
-- Only `cue-coreaudio` may contain `unsafe`. The other crates set `#![forbid(unsafe_code)]`.
-- `cue-core` does not depend on tauri or objc2.
+- Only `usher-coreaudio` may contain `unsafe`. The other crates set `#![forbid(unsafe_code)]`.
+- `usher-core` does not depend on tauri or objc2.
 - One engine thread holds all mutable state, so there are no locks in the domain code. CoreAudio
   callbacks only send `Event`s through the channel.
 - The UI never mutates state directly. It sends commands (`reorder`, `promote`, `set_never_use`,
@@ -297,7 +297,7 @@ an outside click, Escape, or a second click on the icon.
 |  2  ● MacBook Pro Microphone       ...       |
 |----------------------------------------------|
 | ⚠ Could not set output: <reason>              |  only on error
-| Update to cue 1.2.0…                          |  only when pending (hop)
+| Update to usher 1.2.0…                          |  only when pending (hop)
 | Settings…                              Quit  |
 +----------------------------------------------+
 ```
@@ -347,14 +347,14 @@ The settings window has one pane:
 
 The plan includes these steps, written as commands for the owner to run:
 
-- create the GitHub repo `cef62/cue`;
-- generate the minisign key pair (`~/.tauri/cue.key` and `cue.password`);
+- create the GitHub repo `cef62/usher`;
+- generate the minisign key pair (`~/.tauri/usher.key` and `usher.password`);
 - add the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets.
 
 Until those steps are done:
 
 - `tauri.conf.json` holds a placeholder pubkey;
-- the pinned-endpoint test uses `https://github.com/cef62/cue/releases/latest/download/latest.json`;
+- the pinned-endpoint test uses `https://github.com/cef62/usher/releases/latest/download/latest.json`;
 - the release workflows are built and run last.
 
 **Additions beyond hop (owner):**
@@ -369,7 +369,7 @@ Until those steps are done:
 
 ## 9. Testing
 
-- **cue-core:** unit tests for every rule above, using a fake device set and a fake clock. The
+- **usher-core:** unit tests for every rule above, using a fake device set and a fake clock. The
   scenarios are ported from the fork (`docs/audit/core-audio-and-switching.md` §5):
   - the top device connects or leaves;
   - AirPods take the input on connect;
@@ -385,7 +385,7 @@ Until those steps are done:
   - applying actions;
   - a failed set leaves an error and no state change;
   - the rebind backoff schedule.
-- **cue-coreaudio:** thin. One `#[ignore]` smoke test enumerates real devices, run by hand on a Mac.
+- **usher-coreaudio:** thin. One `#[ignore]` smoke test enumerates real devices, run by hand on a Mac.
 - **Frontend:** Vitest for list ordering, drag-to-command mapping, keyboard handling and the
   release-notes parser (from hop).
 - **Manual QA checklist** in `docs/qa.md`: real AirPods, a USB interface on two ports, and a display

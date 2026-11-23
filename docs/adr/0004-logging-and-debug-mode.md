@@ -29,7 +29,7 @@ Option 1. The format and levels are in design §5.11.
 The pure core logs nothing. `reconcile()` returns structured `Reason`s, which the engine logs. This
 keeps the core free of I/O and makes "why did it pick X" testable.
 
-Debug mode is a persisted Settings toggle. It also turns on with `CUE_LOG=debug`, and debug builds
+Debug mode is a persisted Settings toggle. It also turns on with `USHER_LOG=debug`, and debug builds
 default to it. While it is on, the panel shows a badge.
 
 ## Consequences

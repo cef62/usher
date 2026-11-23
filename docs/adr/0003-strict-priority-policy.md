@@ -34,10 +34,10 @@ macOS version and timed on one hardware set.
 
 A, chosen by the owner, with these mitigations:
 
-1. **Click to promote.** Clicking a device in cue's panel moves it to the top of its list. A
+1. **Click to promote.** Clicking a device in usher's panel moves it to the top of its list. A
    temporary switch is one click and it persists. A pick made in Control Center is reverted, by design.
 2. **Loop guard.**
-   - If cue reverts the same role 3 times within 10 s, it turns auto-switch off, shows the off state
+   - If usher reverts the same role 3 times within 10 s, it turns auto-switch off, shows the off state
      on the menu-bar icon, and posts a notification naming the device that kept taking the default.
    - The user turns auto-switch back on by hand.
 3. **"Never use" flag** per device and role.
@@ -51,5 +51,5 @@ A, chosen by the owner, with these mitigations:
   detection, no timing windows except the loop guard, and no Control Center sniffing.
 - Our own writes need no echo suppression. Re-running the decision after our write is a no-op,
   because the system already matches the desired default.
-- Users who switch often in Control Center will find cue fights them. The loop guard and click to
+- Users who switch often in Control Center will find usher fights them. The loop guard and click to
   promote are the answer. If this proves wrong in daily use, supersede this ADR with C.

@@ -1,35 +1,35 @@
-# cue M1 Foundation Implementation Plan
+# usher M1 Foundation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A repo that mirrors hop, a Cargo workspace that builds, and a tray-only Tauri app that launches, writes `~/Library/Logs/com.cef62.cue/cue.log`, and passes a CI quality gate with clippy, fmt and a size check.
+**Goal:** A repo that mirrors hop, a Cargo workspace that builds, and a tray-only Tauri app that launches, writes `~/Library/Logs/com.cef62.usher/usher.log`, and passes a CI quality gate with clippy, fmt and a size check.
 
-**Architecture:** Root Cargo workspace (`crates/cue-core` empty lib, `src-tauri` app `cue` / lib `cue_lib`). The app is an Accessory (agent) app with a tray menu and no windows. Logging goes through the `log` facade into `tauri-plugin-log`; one pure function picks the level, and `log::set_max_level` changes it at runtime. Node tooling (pnpm, Vite, Vitest, changesets) is copied from hop and adds `scripts/check-size.mjs`.
+**Architecture:** Root Cargo workspace (`crates/usher-core` empty lib, `src-tauri` app `usher` / lib `usher_lib`). The app is an Accessory (agent) app with a tray menu and no windows. Logging goes through the `log` facade into `tauri-plugin-log`; one pure function picks the level, and `log::set_max_level` changes it at runtime. Node tooling (pnpm, Vite, Vitest, changesets) is copied from hop and adds `scripts/check-size.mjs`.
 
 **Tech Stack:** Tauri 2.12.7, tauri-build 2.7.6, tauri-plugin-log 2.10.2 (Rust) / `@tauri-apps/plugin-log` ^2.10.2 (JS), log 0.4.35, Rust edition 2024, pnpm 12.3.4, TypeScript ~7.0.2, Vite ^8.3.6, Vitest ^5.1.0, @changesets/cli 3.0.3.
 
-**Spec:** `docs/superpowers/specs/2026-11-23-cue-design.md` (§3, §5.11, §6, §8). Roadmap: `docs/superpowers/plans/2026-11-23-cue-roadmap.md` (shared conventions apply). Reference repo: `/Volumes/Dev/matteo/hop` (read-only; written `hop:` below). Reuse notes: `docs/audit/hop-reuse.md`.
+**Spec:** `docs/superpowers/specs/2026-11-23-usher-design.md` (§3, §5.11, §6, §8). Roadmap: `docs/superpowers/plans/2026-11-23-usher-roadmap.md` (shared conventions apply). Reference repo: `/Volumes/Dev/matteo/hop` (read-only; written `hop:` below). Reuse notes: `docs/audit/hop-reuse.md`.
 
 ## Global Constraints
 
-- Bundle id `com.cef62.cue`. Product name `cue`. Repo `cef62/cue`.
+- Bundle id `com.cef62.usher`. Product name `usher`. Repo `cef62/usher`.
 - macOS on Apple Silicon only (`aarch64-apple-darwin`). `minimumSystemVersion` `14.0`.
 - Ad-hoc signing: `bundle.macOS.signingIdentity` `"-"`. No updater, no `createUpdaterArtifacts`, no release workflows in M1 (M5).
-- Workspace members: `crates/cue-core` (lib `cue_core`), `src-tauri` (package `cue`, lib `cue_lib`, bin `cue`). `crates/cue-coreaudio` arrives in M3.
-- `#![forbid(unsafe_code)]` in `cue-core` and `src-tauri`.
+- Workspace members: `crates/usher-core` (lib `usher_core`), `src-tauri` (package `usher`, lib `usher_lib`, bin `usher`). `crates/usher-coreaudio` arrives in M3.
+- `#![forbid(unsafe_code)]` in `usher-core` and `src-tauri`.
 - Non-test `.rs`, `.ts`, `.tsx` files: 300 lines or fewer. Functions: 40 lines or fewer (`clippy.toml` `too-many-lines-threshold = 40`).
 - Quality gate: `pnpm build`, `pnpm test`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`, `pnpm check:size`.
-- Log file `~/Library/Logs/com.cef62.cue/cue.log`, rotates at 1 MB, keeps 5 files. Debug detail only for cue crates; dependencies stay at info.
-- Debug level when `CUE_LOG=debug`, in debug builds, or when the Debug setting is on (setting arrives in M4).
+- Log file `~/Library/Logs/com.cef62.usher/usher.log`, rotates at 1 MB, keeps 5 files. Debug detail only for usher crates; dependencies stay at info.
+- Debug level when `USHER_LOG=debug`, in debug builds, or when the Debug setting is on (setting arrives in M4).
 - Rust unit tests inline `#[cfg(test)] mod tests`; TS tests Vitest, next to the module.
 - No ESLint. TypeScript `strict`.
 - Any departure from the spec gets an ADR in `docs/adr/`.
 
 ## Review Focus
 
-1. A second cue starts while one runs (login item, or `pnpm tauri dev` beside the installed app): the second exits at once and logs why; the first keeps its tray icon. Pinned in Task 4.
-2. `CUE_LOG` holds `DEBUG`, ` debug `, an empty string or `verbose`: case and spaces are ignored, an unknown value falls back to the default, nothing panics. Pinned in Task 5.
-3. Debug mode is on: `tao`, `wry` and other dependencies still log at info only; a target that only starts with the same letters (`cue_libx`, `cuex`) is not a cue crate. Pinned in Task 5.
+1. A second usher starts while one runs (login item, or `pnpm tauri dev` beside the installed app): the second exits at once and logs why; the first keeps its tray icon. Pinned in Task 4.
+2. `USHER_LOG` holds `DEBUG`, ` debug `, an empty string or `verbose`: case and spaces are ignored, an unknown value falls back to the default, nothing panics. Pinned in Task 5.
+3. Debug mode is on: `tao`, `wry` and other dependencies still log at info only; a target that only starts with the same letters (`usher_libx`, `usherx`) is not a usher crate. Pinned in Task 5.
 4. `check:size` meets CRLF files, a trailing newline, `#[cfg(test)]` inside a string, and new files not yet added to git: CRLF and the trailing newline do not change the count, the string does not cut the count, untracked files are checked, gitignored files are not. Pinned in Task 2.
 5. The webview logs an `Error` or an object: the log line shows the stack or JSON, not `[object Object]` or `{}`, and the devtools console still prints it. Pinned in Task 5.
 
@@ -46,12 +46,12 @@
 | `scripts/sync-version.mjs` | package.json version into tauri.conf.json | 2 |
 | `scripts/check-size.mjs`, `scripts/check-size.test.ts` | 300-line limit | 2 |
 | `Cargo.toml`, `Cargo.lock`, `clippy.toml` | workspace, lints, release profile | 3 |
-| `crates/cue-core/{Cargo.toml,src/lib.rs}` | empty core (M2 fills it) | 3 |
+| `crates/usher-core/{Cargo.toml,src/lib.rs}` | empty core (M2 fills it) | 3 |
 | `src-tauri/{Cargo.toml,build.rs,Info.plist,tauri.conf.json}` | app package and bundle config | 4 |
 | `src-tauri/icons/*` | app icons (placeholders), tray template glyph | 4 |
 | `src-tauri/src/{main.rs,lib.rs}` | entry, builder, setup order | 4, 5 |
 | `src-tauri/src/instance.rs` | single-instance `flock` lock | 4 |
-| `src-tauri/src/tray.rs` | tray icon and "Quit cue" | 4 |
+| `src-tauri/src/tray.rs` | tray icon and "Quit usher" | 4 |
 | `src-tauri/src/logging.rs` | level choice, target filter, plugin builder, runtime level | 5 |
 | `src/log.ts`, `src/log.test.ts`, `src-tauri/capabilities/default.json` | webview console forwarding | 5 |
 | `.github/workflows/ci.yml` | CI quality gate | 6 |
@@ -75,7 +75,7 @@ The repo is on `docs/design` (2 commits) with `docs/superpowers/plans/` untracke
 ```bash
 cd /Volumes/Dev/matteo/macos-audio-priority
 git add docs/superpowers/plans
-git commit -m "docs: add cue roadmap and M1 plan"
+git commit -m "docs: add usher roadmap and M1 plan"
 git branch main docs/design
 git switch -c feat/m1-foundation docs/design
 git branch
@@ -88,25 +88,25 @@ Copy verbatim from hop: `LICENSE`, `CLAUDE.md` (`@AGENTS.md`), `.claude/settings
 
 - [ ] **Step 3: Copy `.gitignore`, then drop `site/dist/` and `.astro/`**
 
-No docs site in cue. Keep every other line (root `target/` covers the workspace target dir).
+No docs site in usher. Keep every other line (root `target/` covers the workspace target dir).
 
 - [ ] **Step 4: Copy `AGENTS.md`, then change three things**
 
-1. Replace the `## Stack` body with: "Tauri 2 with a Rust Cargo workspace (`crates/cue-core`, `crates/cue-coreaudio` from M3, `src-tauri`) and React 19 + Vite, plain CSS using CSS variables. The Settings and What's new windows use native HTML controls styled to look like macOS; no component library, no ESLint."
-2. Add `## Size limits`: non-test `.rs`, `.ts` and `.tsx` files stay at 300 lines or fewer (`pnpm check:size`; what counts as test is in ADR 0005); functions stay at 40 lines or fewer (`clippy::too_many_lines`, threshold in `clippy.toml`). Split by responsibility before a file reaches the limit. `unsafe` only in `crates/cue-coreaudio`.
-3. Add `## Decisions`: the spec is `docs/superpowers/specs/2026-11-23-cue-design.md`. Any decision that departs from it gets a new ADR in `docs/adr/` (template and index in `docs/adr/README.md`) in the same PR.
+1. Replace the `## Stack` body with: "Tauri 2 with a Rust Cargo workspace (`crates/usher-core`, `crates/usher-coreaudio` from M3, `src-tauri`) and React 19 + Vite, plain CSS using CSS variables. The Settings and What's new windows use native HTML controls styled to look like macOS; no component library, no ESLint."
+2. Add `## Size limits`: non-test `.rs`, `.ts` and `.tsx` files stay at 300 lines or fewer (`pnpm check:size`; what counts as test is in ADR 0005); functions stay at 40 lines or fewer (`clippy::too_many_lines`, threshold in `clippy.toml`). Split by responsibility before a file reaches the limit. `unsafe` only in `crates/usher-coreaudio`.
+3. Add `## Decisions`: the spec is `docs/superpowers/specs/2026-11-23-usher-design.md`. Any decision that departs from it gets a new ADR in `docs/adr/` (template and index in `docs/adr/README.md`) in the same PR.
 
 - [ ] **Step 5: Copy `CONTRIBUTING.md`, then adapt it**
 
-- Title `# Contributing to cue`; every `hop` becomes `cue`.
+- Title `# Contributing to usher`; every `hop` becomes `usher`.
 - Quality gate row 1 becomes: `pnpm build`, `pnpm test`, `pnpm check:size`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check` all green; new logic has a test.
 - Row 2: `pnpm build:app` (or at least `cargo build --release`) when `src-tauri/`, `crates/` or `tauri.conf.json` changed.
-- Delete the docs-site paragraph. Keep "quit the installed cue before `pnpm tauri dev`".
+- Delete the docs-site paragraph. Keep "quit the installed usher before `pnpm tauri dev`".
 - Replace the bodies of "Testing updates against a local feed" and "Releases" with one line each: "Added in M5 with the updater and release workflows."
 
 - [ ] **Step 6: Write the `README.md` stub**
 
-Sections: one-line description (spec §1 first sentence), "Status: in development, no release yet", "Build from source" with `pnpm install`, `pnpm build`, `pnpm tauri dev`, and "Logs: `~/Library/Logs/com.cef62.cue/cue.log`; `CUE_LOG=debug` adds detail".
+Sections: one-line description (spec §1 first sentence), "Status: in development, no release yet", "Build from source" with `pnpm install`, `pnpm build`, `pnpm tauri dev`, and "Logs: `~/Library/Logs/com.cef62.usher/usher.log`; `USHER_LOG=debug` adds detail".
 
 - [ ] **Step 7: Verify the copies**
 
@@ -139,14 +139,14 @@ git commit -m "chore: repo skeleton and agent config from hop"
 
 - [ ] **Step 1: Copy `package.json` from hop, then change it**
 
-- `name` `cue`, `version` `0.0.0` (the first changeset makes it 0.1.0).
+- `name` `usher`, `version` `0.0.0` (the first changeset makes it 0.1.0).
 - Scripts: keep `dev`, `build`, `preview`, `test`, `changeset`, `version-packages`, `tauri`. Add `"check:size": "node scripts/check-size.mjs"` and `"build:app": "tauri build --target aarch64-apple-darwin --bundles app"` (M5 adds the signing env vars). Drop `release:tag` (M5) and every `site:*`/`docs:*` script.
 - devDependencies: keep `@changesets/cli`, `@tauri-apps/cli`, `@types/node`, `typescript`, `vite`, `vitest`. Drop `astro`, `@astrojs/markdown-remark`, `@vitejs/plugin-react`, `@types/react*`.
 - dependencies: `@tauri-apps/api` ^2.12.4, `@tauri-apps/plugin-log` ^2.10.2. React, react-dom and the React plugin come back in M4 with the first window (no unused dependencies, gate row 4).
 
 - [ ] **Step 2: Copy `pnpm-workspace.yaml`, `tsconfig.json`, `vitest.config.ts` as-is; copy `vite.config.ts` without the React plugin and without `build.rollupOptions` (one page)**
 
-- [ ] **Step 3: Write `index.html` (copy hop's, title `cue`, no stylesheet, script `/src/main.ts`) and `src/main.ts` as one comment line: `// The panel arrives in M4; Task 5 adds console forwarding here.`**
+- [ ] **Step 3: Write `index.html` (copy hop's, title `usher`, no stylesheet, script `/src/main.ts`) and `src/main.ts` as one comment line: `// The panel arrives in M4; Task 5 adds console forwarding here.`**
 
 - [ ] **Step 4: Copy `scripts/sync-version.mjs` as-is** (no hop names in it).
 
@@ -170,7 +170,7 @@ test("trailing newline and CRLF do not change the count", () => {
   expect(countLines("a.ts", "x\r\ny\r\n")).toBe(2);
 });
 test("test files count as zero", () => {
-  for (const p of ["src/a.test.ts", "src/A.test.tsx", "tests/x.rs", "crates/cue-core/tests/s.rs", "src-tauri/tests/t.ts"])
+  for (const p of ["src/a.test.ts", "src/A.test.tsx", "tests/x.rs", "crates/usher-core/tests/s.rs", "src-tauri/tests/t.ts"])
     expect(isTestFile(p), p).toBe(true);
   for (const p of ["src/a.ts", "src/contest.ts", "src/testsuite.rs", "src-tauri/src/lib.rs"])
     expect(isTestFile(p), p).toBe(false);
@@ -221,19 +221,19 @@ git commit -m "build: node tooling and size check"
 
 ---
 
-### Task 3: Cargo workspace and cue-core
+### Task 3: Cargo workspace and usher-core
 
 **Files:**
-- Create: `Cargo.toml`, `clippy.toml`, `crates/cue-core/Cargo.toml`, `crates/cue-core/src/lib.rs`
+- Create: `Cargo.toml`, `clippy.toml`, `crates/usher-core/Cargo.toml`, `crates/usher-core/src/lib.rs`
 - Copy: `hop:src-tauri/Cargo.lock` to `Cargo.lock` (seed, see Step 2)
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: workspace with `[workspace.package]` (`version = "0.1.0"`, `edition = "2024"`, `license = "MIT"`) and `[workspace.lints]`; every member sets `[lints] workspace = true` and inherits package fields with `.workspace = true`. Crate `cue_core` with no public items yet.
+- Produces: workspace with `[workspace.package]` (`version = "0.1.0"`, `edition = "2024"`, `license = "MIT"`) and `[workspace.lints]`; every member sets `[lints] workspace = true` and inherits package fields with `.workspace = true`. Crate `usher_core` with no public items yet.
 
 - [ ] **Step 1: Write the root `Cargo.toml`**
 
-- `[workspace]` `resolver = "3"`, `members = ["crates/cue-core", "src-tauri"]`.
+- `[workspace]` `resolver = "3"`, `members = ["crates/usher-core", "src-tauri"]`.
 - `[workspace.lints.clippy]` `too_many_lines = "warn"`. It is a pedantic lint, so the threshold in `clippy.toml` does nothing unless it is enabled here; `-D warnings` turns it into an error.
 - Move hop's `[profile.release]` block here verbatim. Cargo ignores profiles in member manifests.
 - `clippy.toml`: `too-many-lines-threshold = 40`. No `rustfmt.toml` (defaults).
@@ -242,37 +242,37 @@ git commit -m "build: node tooling and size check"
 
 `cp /Volumes/Dev/matteo/hop/src-tauri/Cargo.lock Cargo.lock`. Cargo keeps the versions already locked (tauri 2.12.7, tauri-build 2.7.6, log 0.4.35, tempfile 3.27.0, serde_json 1.0.154), adds new ones and prunes unused ones on the next build.
 
-- [ ] **Step 3: Write `crates/cue-core`**
+- [ ] **Step 3: Write `crates/usher-core`**
 
-`Cargo.toml`: `name = "cue-core"`, inherited version/edition/license, `description = "cue's pure domain: priority lists, reconcile, identity"`, no dependencies (serde arrives in M2), `[lints] workspace = true`.
+`Cargo.toml`: `name = "usher-core"`, inherited version/edition/license, `description = "usher's pure domain: priority lists, reconcile, identity"`, no dependencies (serde arrives in M2), `[lints] workspace = true`.
 
-`src/lib.rs`: a `//!` doc line ("Pure domain for cue; no I/O, no clock. Filled in M2."), `#![forbid(unsafe_code)]`, and the smoke test:
+`src/lib.rs`: a `//!` doc line ("Pure domain for usher; no I/O, no clock. Filled in M2."), `#![forbid(unsafe_code)]`, and the smoke test:
 
 ```rust
 #[cfg(test)]
 mod tests {
     #[test]
     fn crate_builds_as_a_workspace_member() {
-        assert_eq!(env!("CARGO_PKG_NAME"), "cue-core");
+        assert_eq!(env!("CARGO_PKG_NAME"), "usher-core");
     }
 }
 ```
 
 - [ ] **Step 4: Temporarily build only the core**
 
-`src-tauri` does not exist yet, so run: `cargo test -p cue-core` after commenting `"src-tauri"` out of `members`.
+`src-tauri` does not exist yet, so run: `cargo test -p usher-core` after commenting `"src-tauri"` out of `members`.
 Expected: `test tests::crate_builds_as_a_workspace_member ... ok`, `test result: ok. 1 passed`.
 
 - [ ] **Step 5: Lint and format**
 
-Run: `cargo clippy -p cue-core --all-targets -- -D warnings && cargo fmt --all --check`
+Run: `cargo clippy -p usher-core --all-targets -- -D warnings && cargo fmt --all --check`
 Expected: `Finished`, no warnings; fmt prints nothing, exit 0.
 
 - [ ] **Step 6: Commit (with `"src-tauri"` still commented out; Task 4 restores it)**
 
 ```bash
 git add Cargo.toml Cargo.lock clippy.toml crates
-git commit -m "build: cargo workspace with empty cue-core"
+git commit -m "build: cargo workspace with empty usher-core"
 ```
 
 ---
@@ -286,24 +286,24 @@ git commit -m "build: cargo workspace with empty cue-core"
 **Interfaces:**
 - Consumes: workspace from Task 3; `dist/` from Task 2 (`pnpm build` before any cargo command).
 - Produces:
-  - `cue_lib::run()` (called by `main.rs`).
+  - `usher_lib::run()` (called by `main.rs`).
   - `instance::hold_instance_lock(dir: &Path) -> bool`: true when this process holds `dir/instance.lock`.
-  - `tray::build(app: &tauri::AppHandle) -> tauri::Result<()>`: tray id `"main"`, tooltip `"cue"`, one item id `"quit"` text `"Quit cue"`.
+  - `tray::build(app: &tauri::AppHandle) -> tauri::Result<()>`: tray id `"main"`, tooltip `"usher"`, one item id `"quit"` text `"Quit usher"`.
   - `run()` has a `.setup` closure that Task 5 extends; keep `run` at 40 lines or fewer by putting the setup body in `fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>`.
 
 - [ ] **Step 1: Write `src-tauri/Cargo.toml`** (copy hop's, then change)
 
-- `name = "cue"`, inherited version/edition/license, description from the README line. `[lib] name = "cue_lib"`, same `crate-type`.
+- `name = "usher"`, inherited version/edition/license, description from the README line. `[lib] name = "usher_lib"`, same `crate-type`.
 - `[build-dependencies]` `tauri-build = "2.7.6"`.
 - `[dependencies]` `tauri = { version = "2.12.7", features = ["tray-icon", "image-png"] }`, `tauri-plugin-log = "2.10.2"`, `log = "0.4.35"`. Drop every other hop dependency, the objc2 block and `macos-private-api` (M4 adds the panel helpers).
 - `[dev-dependencies]` `tempfile = "3.27.0"`, `serde_json = "1.0.154"`.
 - Drop `[profile.release]` (now in the root). Add `[lints] workspace = true`.
 
-- [ ] **Step 2: Copy `build.rs`, `Info.plist` (comment: "hop" becomes "cue") and `main.rs` (`hop_lib` becomes `cue_lib`; add `#![forbid(unsafe_code)]`)**
+- [ ] **Step 2: Copy `build.rs`, `Info.plist` (comment: "hop" becomes "usher") and `main.rs` (`hop_lib` becomes `usher_lib`; add `#![forbid(unsafe_code)]`)**
 
 - [ ] **Step 3: Write `tauri.conf.json`** (copy hop's, then change)
 
-- `productName` `cue`, `version` `0.0.0`, `identifier` `com.cef62.cue`. Keep `build`.
+- `productName` `usher`, `version` `0.0.0`, `identifier` `com.cef62.usher`. Keep `build`.
 - `app.windows`: `[]`. Tauri 2 runs with no windows; a tray app stays alive. Drop `macOSPrivateApi`.
 - CSP: hop's without `icon:`.
 - `bundle`: drop `createUpdaterArtifacts`; keep `targets`, `icon`; `macOS`: `{ "signingIdentity": "-", "minimumSystemVersion": "14.0" }`.
@@ -311,7 +311,7 @@ git commit -m "build: cargo workspace with empty cue-core"
 
 - [ ] **Step 4: Make the icons**
 
-- App icons: copy hop's five files from `hop:src-tauri/icons/` as placeholders (a cue icon comes before the first release, M5).
+- App icons: copy hop's five files from `hop:src-tauri/icons/` as placeholders (a usher icon comes before the first release, M5).
 - Tray glyph (spec §7.2 "on" speaker, placeholder): write `src-tauri/icons/tray-template.svg`:
 
 ```xml
@@ -345,8 +345,8 @@ In `src-tauri/src/lib.rs`:
 #[test]
 fn bundle_config_pins_identity_and_platform() {
     let c: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
-    assert_eq!(c["identifier"], "com.cef62.cue");
-    assert_eq!(c["productName"], "cue");
+    assert_eq!(c["identifier"], "com.cef62.usher");
+    assert_eq!(c["productName"], "usher");
     assert_eq!(c["bundle"]["macOS"]["minimumSystemVersion"], "14.0");
     assert_eq!(c["bundle"]["macOS"]["signingIdentity"], "-");
     assert!(c["plugins"]["updater"].is_null(), "updater is M5");
@@ -355,7 +355,7 @@ fn bundle_config_pins_identity_and_platform() {
 
 - [ ] **Step 6: Run them to see them fail**
 
-Run: `cargo test -p cue`
+Run: `cargo test -p usher`
 Expected: compile error `cannot find function hold_instance_lock`.
 
 - [ ] **Step 7: Implement `instance.rs`**
@@ -364,21 +364,21 @@ Copy `hold_instance_lock` and its doc comment from `hop:src-tauri/src/login.rs:1
 
 - [ ] **Step 8: Implement `tray.rs` and `lib.rs`**
 
-- `tray::build`: adapt `hop:src-tauri/src/lib.rs:50-78`. Menu has only `MenuItem::with_id(app, "quit", "Quit cue", true, None::<&str>)`; on `"quit"` call `log::info!("quit from tray")` then `app.exit(0)`. Keep `include_bytes!("../icons/tray-template.png")`, `icon_as_template(true)`.
-- `lib.rs`: `#![forbid(unsafe_code)]`, `mod instance; mod tray;`. `run()` follows `hop:src-tauri/src/lib.rs:80-158` minus everything cue lacks: builder with `.setup(setup)`, `.build(tauri::generate_context!()).expect("error while running cue")`, `set_activation_policy(Accessory)` before `run` (keep hop's comment), `app.run(|_, _| {})`.
-- `setup`: first, `app.path().app_data_dir()` and `hold_instance_lock`; when false, print `cue: another cue is running; this one exits` to stderr and `std::process::exit(0)`. Then `tray::build`; on error print `cue: no menu-bar icon (<e>)` and continue.
+- `tray::build`: adapt `hop:src-tauri/src/lib.rs:50-78`. Menu has only `MenuItem::with_id(app, "quit", "Quit usher", true, None::<&str>)`; on `"quit"` call `log::info!("quit from tray")` then `app.exit(0)`. Keep `include_bytes!("../icons/tray-template.png")`, `icon_as_template(true)`.
+- `lib.rs`: `#![forbid(unsafe_code)]`, `mod instance; mod tray;`. `run()` follows `hop:src-tauri/src/lib.rs:80-158` minus everything usher lacks: builder with `.setup(setup)`, `.build(tauri::generate_context!()).expect("error while running usher")`, `set_activation_policy(Accessory)` before `run` (keep hop's comment), `app.run(|_, _| {})`.
+- `setup`: first, `app.path().app_data_dir()` and `hold_instance_lock`; when false, print `usher: another usher is running; this one exits` to stderr and `std::process::exit(0)`. Then `tray::build`; on error print `usher: no menu-bar icon (<e>)` and continue.
 - Restore `"src-tauri"` in the root `members`.
 
 - [ ] **Step 9: Run tests, lint, format**
 
 Run: `pnpm build && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check`
-Expected: 4 tests pass (`cue-core` 1, `cue` 3); clippy `Finished` with no warnings; fmt silent.
+Expected: 4 tests pass (`usher-core` 1, `usher` 3); clippy `Finished` with no warnings; fmt silent.
 If `#![forbid(unsafe_code)]` fails inside `tauri::generate_context!` or `generate_handler!` expansion, switch `src-tauri` to `#![deny(unsafe_code)]` and record it in ADR 0005 (Task 7).
 
 - [ ] **Step 10: Launch by hand**
 
 Run: `pnpm tauri dev`
-Expected: a speaker glyph in the menu bar, tinted for light and dark; no Dock icon; not in ⌘Tab; menu shows only "Quit cue", which ends the process.
+Expected: a speaker glyph in the menu bar, tinted for light and dark; no Dock icon; not in ⌘Tab; menu shows only "Quit usher", which ends the process.
 
 - [ ] **Step 11: Commit**
 
@@ -402,13 +402,13 @@ git commit -m "feat: tray-only agent app with single-instance lock"
   - `logging::log_level(env: Option<&str>, debug_build: bool, debug_setting: bool) -> log::LevelFilter`
   - `logging::allowed(target: &str, level: log::Level, max: log::LevelFilter) -> bool`
   - `logging::plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R>`
-  - `logging::apply(debug_setting: bool) -> log::LevelFilter`: reads `CUE_LOG`, calls `log_level` with `cfg!(debug_assertions)`, then `log::set_max_level`; returns the level.
-  - `const CUE_TARGETS: &[&str] = &["cue", "cue_lib", "cue_core", "cue_coreaudio", tauri_plugin_log::WEBVIEW_TARGET]`
+  - `logging::apply(debug_setting: bool) -> log::LevelFilter`: reads `USHER_LOG`, calls `log_level` with `cfg!(debug_assertions)`, then `log::set_max_level`; returns the level.
+  - `const USHER_TARGETS: &[&str] = &["usher", "usher_lib", "usher_core", "usher_coreaudio", tauri_plugin_log::WEBVIEW_TARGET]`
   - TS: `export type LogSink = Record<"trace" | "debug" | "info" | "warn" | "error", (msg: string) => Promise<void>>`, `export function format(args: unknown[]): string`, `export function forwardConsole(c: Pick<Console, "log" | "debug" | "info" | "warn" | "error">, sink: LogSink): void`
 
 Plugin facts (read in the 2.10.2 crate source):
 - `RotationStrategy::KeepSome(n)` keeps `n` rotated files plus the active one. Spec "keeps 5 files" means 5 on disk, so use `KeepSome(4)`: at most 5 files, 5 MB.
-- `TargetKind::LogDir` resolves to `app_log_dir()`, which is `~/Library/Logs/com.cef62.cue/` on macOS; `file_name: Some("cue")` gives `cue.log`.
+- `TargetKind::LogDir` resolves to `app_log_dir()`, which is `~/Library/Logs/com.cef62.usher/` on macOS; `file_name: Some("usher")` gives `usher.log`.
 - `build()` calls `log::set_max_level` with the dispatch's own maximum during plugin setup, which runs before the app's `setup`. `apply` runs in `setup`, so it wins.
 - The webview's `plugin:log|log` command logs with a target that starts with `WEBVIEW_TARGET` (`"webview"`).
 
@@ -426,57 +426,57 @@ fn debug_build_or_setting_turns_debug_on() {
     assert_eq!(log_level(None, false, true), F::Debug);
 }
 #[test]
-fn cue_log_wins_and_is_parsed_loosely() {
+fn usher_log_wins_and_is_parsed_loosely() {
     assert_eq!(log_level(Some("debug"), false, false), F::Debug);
     assert_eq!(log_level(Some(" DEBUG "), false, false), F::Debug);
     assert_eq!(log_level(Some("trace"), false, false), F::Trace);
     assert_eq!(log_level(Some("warn"), true, true), F::Warn);
 }
 #[test]
-fn unknown_or_empty_cue_log_falls_back() {
+fn unknown_or_empty_usher_log_falls_back() {
     assert_eq!(log_level(Some(""), false, false), F::Info);
     assert_eq!(log_level(Some("verbose"), true, false), F::Debug);
 }
 #[test]
-fn debug_detail_is_for_cue_crates_only() {
-    for t in ["cue", "cue_lib::tray", "cue_core", "cue_coreaudio::sys", "webview:http://localhost"] {
+fn debug_detail_is_for_usher_crates_only() {
+    for t in ["usher", "usher_lib::tray", "usher_core", "usher_coreaudio::sys", "webview:http://localhost"] {
         assert!(allowed(t, Level::Debug, F::Debug), "{t}");
     }
-    for t in ["tao::platform", "wry", "cue_libx", "cuex", "tauri"] {
+    for t in ["tao::platform", "wry", "usher_libx", "usherx", "tauri"] {
         assert!(!allowed(t, Level::Debug, F::Debug), "{t}");
         assert!(allowed(t, Level::Info, F::Debug), "{t}");
     }
 }
 #[test]
 fn max_level_caps_everyone() {
-    assert!(!allowed("cue_lib", Level::Debug, F::Info));
+    assert!(!allowed("usher_lib", Level::Debug, F::Info));
     assert!(!allowed("tao", Level::Info, F::Warn));
-    assert!(allowed("cue_lib", Level::Error, F::Error));
+    assert!(allowed("usher_lib", Level::Error, F::Error));
 }
 ```
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `cargo test -p cue logging`
+Run: `cargo test -p usher logging`
 Expected: compile error `cannot find function log_level`.
 
 - [ ] **Step 3: Implement `logging.rs`**
 
 - `log_level`: `env` trimmed, parsed case-insensitively with `LevelFilter::from_str`; a parse error or empty string is ignored. Otherwise `Debug` if `debug_build || debug_setting`, else `Info`.
-- `allowed`: a target is a cue target when it equals an entry of `CUE_TARGETS` or starts with `<entry>::` or `<entry>:` (the webview target uses a single colon). Cue targets pass when `level <= max`; others when `level <= min(max, Info)`.
-- `plugin()`: `tauri_plugin_log::Builder::new()` with `.clear_targets()`, targets `Stdout` and `LogDir { file_name: Some("cue".into()) }`, `.max_file_size(1_000_000)`, `.rotation_strategy(RotationStrategy::KeepSome(4))` (comment: KeepSome counts rotated files only; 4 + active = the spec's 5), `.timezone_strategy(TimezoneStrategy::UseLocal)`, `.filter(|m| allowed(m.target(), m.level(), log::max_level()))`, `.build()`. Leave `.level` at its default (Trace) so `log::set_max_level` alone controls the level at runtime.
+- `allowed`: a target is a usher target when it equals an entry of `USHER_TARGETS` or starts with `<entry>::` or `<entry>:` (the webview target uses a single colon). Usher targets pass when `level <= max`; others when `level <= min(max, Info)`.
+- `plugin()`: `tauri_plugin_log::Builder::new()` with `.clear_targets()`, targets `Stdout` and `LogDir { file_name: Some("usher".into()) }`, `.max_file_size(1_000_000)`, `.rotation_strategy(RotationStrategy::KeepSome(4))` (comment: KeepSome counts rotated files only; 4 + active = the spec's 5), `.timezone_strategy(TimezoneStrategy::UseLocal)`, `.filter(|m| allowed(m.target(), m.level(), log::max_level()))`, `.build()`. Leave `.level` at its default (Trace) so `log::set_max_level` alone controls the level at runtime.
 - `apply`: as in Interfaces; ends with `log::info!("log level {level}")` so every toggle is logged (spec §5.11).
 
 - [ ] **Step 4: Wire it in `lib.rs`**
 
 - `.plugin(logging::plugin())` first on the builder.
-- `setup` order: `logging::apply(false)` (comment: M4 passes the persisted Debug setting), then `log::info!("cue {} starting", app.package_info().version)`, then the instance lock, then the tray.
-- The "another cue is running" and "no menu-bar icon" messages become `log::warn!`. In `instance.rs` the unexpected lock error stays `log::warn!`. Add `log::debug!("instance lock held in {}", dir.display())` after a successful lock (a debug line to check the level by hand).
+- `setup` order: `logging::apply(false)` (comment: M4 passes the persisted Debug setting), then `log::info!("usher {} starting", app.package_info().version)`, then the instance lock, then the tray.
+- The "another usher is running" and "no menu-bar icon" messages become `log::warn!`. In `instance.rs` the unexpected lock error stays `log::warn!`. Add `log::debug!("instance lock held in {}", dir.display())` after a successful lock (a debug line to check the level by hand).
 
 - [ ] **Step 5: Run the Rust tests**
 
 Run: `cargo test --workspace`
-Expected: `test result: ok` for both crates; 9 tests in `cue`.
+Expected: `test result: ok` for both crates; 9 tests in `usher`.
 
 - [ ] **Step 6: Write the failing TS tests in `src/log.test.ts`**
 
@@ -523,17 +523,17 @@ Expected: all exit 0; Vitest `Test Files  2 passed`.
 
 ```bash
 pnpm tauri dev            # quit from the tray after it starts
-tail -n 5 ~/Library/Logs/com.cef62.cue/cue.log
-CUE_LOG=info pnpm tauri dev   # quit again
-tail -n 5 ~/Library/Logs/com.cef62.cue/cue.log
+tail -n 5 ~/Library/Logs/com.cef62.usher/usher.log
+USHER_LOG=info pnpm tauri dev   # quit again
+tail -n 5 ~/Library/Logs/com.cef62.usher/usher.log
 ```
-Expected: first run has `log level DEBUG`, `cue 0.0.0 starting` and `instance lock held in …`; second run has `log level INFO`, the start line, and no `instance lock held` line.
+Expected: first run has `log level DEBUG`, `usher 0.0.0 starting` and `instance lock held in …`; second run has `log level INFO`, the start line, and no `instance lock held` line.
 
 - [ ] **Step 11: Commit**
 
 ```bash
 git add src src-tauri package.json pnpm-lock.yaml Cargo.lock
-git commit -m "feat: file logging with CUE_LOG and debug-build levels"
+git commit -m "feat: file logging with USHER_LOG and debug-build levels"
 ```
 
 ---
@@ -566,7 +566,7 @@ git add .github/workflows/ci.yml
 git commit -m "ci: quality gate with clippy, fmt and size check"
 ```
 
-CI runs for real once the owner creates `cef62/cue` and pushes (M5 prerequisite list).
+CI runs for real once the owner creates `cef62/usher` and pushes (M5 prerequisite list).
 
 ---
 
@@ -586,7 +586,7 @@ CI runs for real once the owner creates `cef62/cue` and pushes (M5 prerequisite 
 - Options: single crate vs workspace; size check by an external tool (tokei, plus a wrapper) vs a small script; function length by clippy vs the script.
 - Decision:
   - Workspace members and lib names from the roadmap; release profile and lints at the root; `too_many_lines` enabled in `[workspace.lints.clippy]` because it is pedantic.
-  - `#![forbid(unsafe_code)]` per crate, not as a workspace lint, because `cue-coreaudio` must allow it (or `deny` in `src-tauri` if Task 4 Step 9 hit the macro case: say which).
+  - `#![forbid(unsafe_code)]` per crate, not as a workspace lint, because `usher-coreaudio` must allow it (or `deny` in `src-tauri` if Task 4 Step 9 hit the macro case: say which).
   - What counts as test for `check:size`: files under a `tests/` directory, `*.test.ts(x)`, and in `.rs` everything from the first line that is only `#[cfg(test)]`. Files come from `git ls-files --cached --others --exclude-standard`.
   - Function length applies to test functions too (clippy cannot skip them); a long test gets `#[allow(clippy::too_many_lines)]` with a reason.
   - Single instance uses hop's `flock` lock, not `tauri-plugin-single-instance` (a socket in shared `/tmp` can be squatted).
@@ -596,23 +596,23 @@ Add the row `| [0005](0005-cargo-workspace-and-size-limits.md) | Cargo workspace
 
 - [ ] **Step 2: Add the changeset**
 
-Run: `pnpm changeset` (choose `minor`). Text: "cue starts in the menu bar with a Quit item and writes a log to ~/Library/Logs/com.cef62.cue/cue.log."
+Run: `pnpm changeset` (choose `minor`). Text: "usher starts in the menu bar with a Quit item and writes a log to ~/Library/Logs/com.cef62.usher/usher.log."
 Expected: one new `.changeset/*.md` file.
 
 - [ ] **Step 3: Run the quality gate and report it as a table**
 
 Run: `pnpm build && pnpm test && pnpm check:size && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check && pnpm build:app`
-Expected: every command exits 0; `target/aarch64-apple-darwin/release/bundle/macos/cue.app` exists.
+Expected: every command exits 0; `target/aarch64-apple-darwin/release/bundle/macos/usher.app` exists.
 
 - [ ] **Step 4: Check the bundle**
 
 ```bash
-plutil -p target/aarch64-apple-darwin/release/bundle/macos/cue.app/Contents/Info.plist | grep -E "LSUIElement|LSMinimumSystemVersion|CFBundleIdentifier"
-codesign -dv target/aarch64-apple-darwin/release/bundle/macos/cue.app 2>&1 | grep Signature
-open target/aarch64-apple-darwin/release/bundle/macos/cue.app; open -n target/aarch64-apple-darwin/release/bundle/macos/cue.app
-grep "another cue is running" ~/Library/Logs/com.cef62.cue/cue.log
+plutil -p target/aarch64-apple-darwin/release/bundle/macos/usher.app/Contents/Info.plist | grep -E "LSUIElement|LSMinimumSystemVersion|CFBundleIdentifier"
+codesign -dv target/aarch64-apple-darwin/release/bundle/macos/usher.app 2>&1 | grep Signature
+open target/aarch64-apple-darwin/release/bundle/macos/usher.app; open -n target/aarch64-apple-darwin/release/bundle/macos/usher.app
+grep "another usher is running" ~/Library/Logs/com.cef62.usher/usher.log
 ```
-Expected: `"LSUIElement" => true`, `"LSMinimumSystemVersion" => "14.0"`, `"CFBundleIdentifier" => "com.cef62.cue"`; `Signature=adhoc`; one tray icon only; the grep finds the second launch's line. Quit from the tray.
+Expected: `"LSUIElement" => true`, `"LSMinimumSystemVersion" => "14.0"`, `"CFBundleIdentifier" => "com.cef62.usher"`; `Signature=adhoc`; one tray icon only; the grep finds the second launch's line. Quit from the tray.
 
 - [ ] **Step 5: Commit**
 
