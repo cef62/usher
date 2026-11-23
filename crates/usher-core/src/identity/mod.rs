@@ -24,11 +24,12 @@ fn parse_usb(uid: &str) -> Option<PortIdentity> {
     if p.len() != 5 || p[0] != "AppleUSBAudioEngine" || p[1].is_empty() || p[2].is_empty() {
         return None;
     }
-    let loc = if (1..=8).contains(&p[3].len()) {
-        u32::from_str_radix(p[3], 16).ok()?
-    } else {
+    // from_str_radix alone accepts a leading '+', so check the digits first.
+    if !(1..=8).contains(&p[3].len()) || !p[3].bytes().all(|b| b.is_ascii_hexdigit()) {
         return None;
-    };
+    }
+    let loc = u32::from_str_radix(p[3], 16).ok()?;
+    // Our reading of "comma-separated integers": non-empty, digits-only segments.
     let endpoints_ok = p[4]
         .split(',')
         .all(|e| !e.is_empty() && e.bytes().all(|b| b.is_ascii_digit()));
@@ -114,6 +115,12 @@ mod tests {
             "AppleUSBAudioEngine:Shure:MV7:123456789:1,2",
             "AppleUSBAudioEngine:Shure:MV7:zz:1,2",
             "AppleUSBAudioEngine:Shure:MV7:14200000:a",
+            "AppleUSBAudioEngine:V:P:+1:1",
+            "AppleUSBAudioEngine:V:P:012345678:1",
+            "AppleUSBAudioEngine:V:P:00000000:1",
+            "AppleUSBAudioEngine:V:P:14200000:1,",
+            "AppleUSBAudioEngine:V:P:14200000:1,,2",
+            "AppleUSBAudioEngine:V:P:14200000:",
         ] {
             assert_eq!(parse_port(uid), None, "{uid}");
         }
@@ -131,6 +138,14 @@ mod tests {
     }
 
     #[test]
+    fn lowercase_forms_parse_as_given() {
+        let id = parse_port("AppleUSBAudioEngine:V:P:142a0000:1").unwrap();
+        assert_eq!(id.port, "142a0000");
+        let lower = DISP.to_lowercase();
+        assert_eq!(parse_port(&lower).unwrap().family, lower);
+    }
+
+    #[test]
     fn zero_uuid_is_never_aliased() {
         let z = "00000000-0000-0000-0000-000000000000";
         assert_eq!(parse_port(z), None);
@@ -144,6 +159,8 @@ mod tests {
         assert_eq!(parse_port(short), None);
         assert_eq!(parse_port(&format!("{DISP}_123")), None);
         assert_eq!(parse_port(&format!("{DISP}_0000000g")), None);
+        assert_eq!(parse_port(&format!("{DISP}_0000000")), None);
+        assert_eq!(parse_port(&format!("{DISP}_000000000")), None);
         assert_eq!(parse_port("37D8832G-2D66-02CA-B9F7-8F30A301B230"), None);
     }
 
