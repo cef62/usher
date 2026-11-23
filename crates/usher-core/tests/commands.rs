@@ -303,6 +303,10 @@ fn panel_json_parses_into_commands() {
         p(r#"{"kind":"setAutoSwitch","args":false}"#).unwrap(),
         Command::SetAutoSwitch(false)
     );
+    assert_eq!(
+        p(r#"{"kind":"setUpdateCheck","args":false}"#).unwrap(),
+        Command::SetUpdateCheck(false)
+    );
     assert!(p(r#"{"kind":"format","args":{}}"#).is_err());
     assert!(p(r#"{"kind":"promote","args":{"role":"speaker","key":"k"}}"#).is_err());
 }
@@ -323,4 +327,23 @@ fn panel_json_rejects_unknown_and_malformed_input() {
 fn panel_json_rejects_extra_top_level_key() {
     let r = serde_json::from_str::<Command>(r#"{"kind":"forget","args":{"key":"k"},"extra":1}"#);
     assert!(r.is_err());
+}
+
+#[test]
+fn set_update_check_reports_a_change_once() {
+    let mut s = State::default();
+    assert_eq!(run(&mut s, &[], Command::SetUpdateCheck(false)), Ok(true));
+    assert_eq!(run(&mut s, &[], Command::SetUpdateCheck(false)), Ok(false));
+    assert!(!usher_core::panel_state(&s, &snap(vec![], None, None)).update_check);
+}
+
+#[test]
+fn a_file_without_update_check_reads_on() {
+    let s = usher_core::from_json(r#"{"schema_version":1,"auto_switch":true}"#).unwrap();
+    assert!(s.update_check);
+    let off = State {
+        update_check: false,
+        ..State::default()
+    };
+    assert!(!usher_core::from_json(&to_json(&off)).unwrap().update_check);
 }

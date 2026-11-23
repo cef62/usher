@@ -31,6 +31,7 @@ pub enum Command {
     },
     SetAutoSwitch(bool),
     SetDebug(bool),
+    SetUpdateCheck(bool),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -91,6 +92,10 @@ fn dispatch(
         }
         Command::SetDebug(on) => {
             state.debug = on;
+            Ok(())
+        }
+        Command::SetUpdateCheck(on) => {
+            state.update_check = on;
             Ok(())
         }
     }
