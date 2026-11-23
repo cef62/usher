@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 // dead_code until CoreAudioSystem (Task 4) calls these.
 #[allow(dead_code)]
+mod listen;
+#[allow(dead_code)]
 mod props;
 #[allow(dead_code)]
 mod scan;
