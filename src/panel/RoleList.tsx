@@ -7,6 +7,9 @@ import { DeviceRow } from "./DeviceRow";
 import { dragToOrder, rowIntent, stepOrder } from "./logic";
 import { movedText } from "./text";
 
+// usher's own live region speaks; dnd-kit's would read raw device keys
+const quiet = { onDragStart: () => undefined, onDragMove: () => undefined, onDragOver: () => undefined, onDragEnd: () => undefined, onDragCancel: () => undefined };
+
 type Props = { role: Role; rows: Row[]; now: number; send: Actions["send"] };
 
 export function RoleList({ role, rows, now, send }: Props) {
@@ -29,6 +32,10 @@ export function RoleList({ role, rows, now, send }: Props) {
   const tab = shown.some((r) => r.key === focusKey) ? focusKey : shown[0]?.key;
 
   useLayoutEffect(() => {
+    // the focused row was forgotten: its button unmounted and focus fell to <body>
+    if (!refocus.current && focusKey && !shown.some((r) => r.key === focusKey) && document.activeElement === document.body) {
+      root.current?.querySelector<HTMLElement>(`.row-main[tabindex="0"]`)?.focus();
+    }
     if (!refocus.current) return;
     root.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(refocus.current)}"] .row-main`)?.focus();
     refocus.current = null;
@@ -61,7 +68,7 @@ export function RoleList({ role, rows, now, send }: Props) {
 
   return (
     <>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd} accessibility={{ announcements: quiet }}>
         <SortableContext items={keys} strategy={verticalListSortingStrategy}>
           <ol ref={root} data-role={role} className="list">
             {shown.map((r, i) => (

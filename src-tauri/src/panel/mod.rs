@@ -79,8 +79,9 @@ pub enum GiveBack {
     Stay,
 }
 
-pub fn give_back(settings_visible: bool) -> GiveBack {
-    if settings_visible {
+/// `opening_settings`: Settings takes the focus next, so the previous app must not flash active.
+pub fn give_back(settings_visible: bool, opening_settings: bool) -> GiveBack {
+    if settings_visible || opening_settings {
         GiveBack::Stay
     } else {
         GiveBack::HideApp
@@ -154,7 +155,12 @@ fn position(app: &AppHandle, icon: tauri::Rect) -> Option<LogicalPosition<f64>> 
     Some(LogicalPosition::new(x, y))
 }
 
-fn apply(app: &AppHandle, icon: Option<tauri::Rect>, step: impl FnOnce(&mut Visibility) -> Step) {
+fn apply(
+    app: &AppHandle,
+    icon: Option<tauri::Rect>,
+    opening_settings: bool,
+    step: impl FnOnce(&mut Visibility) -> Step,
+) {
     let step = step(
         &mut app
             .state::<Mutex<Visibility>>()
@@ -175,7 +181,7 @@ fn apply(app: &AppHandle, icon: Option<tauri::Rect>, step: impl FnOnce(&mut Visi
         }
         Step::Hide => {
             w.hide().ok();
-            if give_back(settings_visible(app)) == GiveBack::HideApp
+            if give_back(settings_visible(app), opening_settings) == GiveBack::HideApp
                 && let Err(e) = app.hide()
             {
                 warn!("app not hidden ({e})");
@@ -187,16 +193,21 @@ fn apply(app: &AppHandle, icon: Option<tauri::Rect>, step: impl FnOnce(&mut Visi
 
 /// Left click on the menu-bar icon; `icon` is the icon's rect.
 pub fn tray_click(app: &AppHandle, icon: tauri::Rect) {
-    apply(app, Some(icon), |v| v.tray_click(Instant::now()));
+    apply(app, Some(icon), false, |v| v.tray_click(Instant::now()));
 }
 
 /// `WindowEvent::Focused` of the panel: clicking away hides it.
 pub fn focus_changed(app: &AppHandle, focused: bool) {
-    apply(app, None, |v| v.focus(focused, Instant::now()));
+    apply(app, None, false, |v| v.focus(focused, Instant::now()));
 }
 
 pub fn hide(app: &AppHandle) {
-    apply(app, None, Visibility::hide);
+    apply(app, None, false, Visibility::hide);
+}
+
+/// Hide for Settings: the app stays active, so the previous app never flashes.
+pub fn hide_for_settings(app: &AppHandle) {
+    apply(app, None, true, Visibility::hide);
 }
 
 #[tauri::command]
@@ -258,7 +269,8 @@ mod tests {
     }
     #[test]
     fn give_back_leaves_focus_when_settings_is_open() {
-        assert_eq!(give_back(false), GiveBack::HideApp);
-        assert_eq!(give_back(true), GiveBack::Stay);
+        assert_eq!(give_back(false, false), GiveBack::HideApp);
+        assert_eq!(give_back(true, false), GiveBack::Stay);
+        assert_eq!(give_back(false, true), GiveBack::Stay);
     }
 }

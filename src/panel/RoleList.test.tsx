@@ -110,3 +110,19 @@ test("a refused command shows its text and the rows go back to the engine's orde
   expect(alertText(root)).toBe("the output list changed; reload and retry");
   expect(names(root)).toEqual(["A", "B", "C"]);
 });
+
+test("forgetting the focused row moves focus to a row button, not <body>", () => {
+  const { root, rerender } = mount(list(abc()));
+  rowButton(root, "B").focus();
+  expect(document.activeElement).toBe(rowButton(root, "B"));
+  rerender(list([row("a", "A", 1), row("c", "C", 2)]));
+  expect(document.activeElement).not.toBe(document.body);
+  expect(document.activeElement?.classList.contains("row-main")).toBe(true);
+});
+
+test("dnd-kit's own announcer never reads a device key", async () => {
+  const keyed = [row("BuiltInSpeakerDevice", "A", 1), row("UsbDevice2", "B", 2), row("c", "C", 3)];
+  const { root } = mount(list(keyed));
+  await drag(handle(root, "A"), 80);
+  expect(document.body.textContent).not.toMatch(/BuiltInSpeakerDevice|UsbDevice2/);
+});

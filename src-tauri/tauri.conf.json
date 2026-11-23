@@ -25,7 +25,9 @@
         "visibleOnAllWorkspaces": true,
         "skipTaskbar": true,
         "shadow": true,
-        "focus": false
+        "focus": false,
+        "acceptFirstMouse": true,
+        "windowEffects": { "effects": ["popover"], "state": "active", "radius": 10 }
       }
     ],
     "security": {

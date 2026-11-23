@@ -135,6 +135,11 @@ mod tests {
         assert_eq!(w["width"], 360);
         assert_eq!(w["alwaysOnTop"], true);
         assert_eq!(w["visibleOnAllWorkspaces"], true);
+        assert_eq!(w["acceptFirstMouse"], true);
+        assert_eq!(
+            w["windowEffects"],
+            serde_json::json!({ "effects": ["popover"], "state": "active", "radius": 10 })
+        );
         assert_eq!(c["app"]["macOSPrivateApi"], true);
         assert_eq!(
             c["app"]["security"]["csp"],
