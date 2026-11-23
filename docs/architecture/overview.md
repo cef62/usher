@@ -27,7 +27,10 @@ flowchart LR
   subgraph app["src-tauri (usher)"]
     ENG[Engine thread<br/>owns state]
     STORE[Store<br/>atomic JSON]
-    SHELL[Tray + Panel + Settings<br/>Login + Updater + WhatsNew]
+    TRAYW[Tray]
+    PW[Panel window]
+    SL[Settings + Login]
+    UPD[Updater + WhatsNew, M5]
   end
 
   subgraph ui["src/ (React)"]
@@ -47,8 +50,11 @@ flowchart LR
   STORE --> ST
   ENG -- state-changed --> PANEL
   PANEL -- commands --> ENG
-  SHELL --> TRAY
-  SET -- commands --> SHELL
+  TRAYW --> TRAY
+  TRAYW --> PW
+  SL --> TRAYW
+  PANEL --- PW
+  SET -- commands --> SL
 ```
 
 ## Event to switch
@@ -83,6 +89,25 @@ Timers on the engine thread:
 - save 500 ms;
 - USB recheck 500 ms;
 - rebind backoff 1/2/4/8/16/60 s.
+
+## Panel command
+
+```mermaid
+sequenceDiagram
+  participant P as Panel
+  participant T as run_command (spawn_blocking)
+  participant H as EngineHandle::request
+  participant E as Engine thread
+
+  P->>T: invoke run_command(cmd)
+  T->>H: request(cmd, 2 s)
+  H->>E: Event::Command(cmd, reply)
+  E->>E: apply(cmd), then reconcile
+  E-->>H: Ok or Refusal
+  H-->>T: result
+  T-->>P: Ok or error copy
+  E->>P: state-changed(PanelView)
+```
 
 ## Auto-switch state
 
