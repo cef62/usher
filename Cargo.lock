@@ -4550,6 +4550,7 @@ dependencies = [
  "tempfile",
  "usher-core",
  "usher-coreaudio",
+ "window-vibrancy",
 ]
 
 [[package]]

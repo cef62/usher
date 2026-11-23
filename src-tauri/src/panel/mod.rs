@@ -99,7 +99,28 @@ fn settings_visible(app: &AppHandle) -> bool {
 
 pub fn setup(app: &AppHandle) {
     app.manage(Mutex::new(Visibility::default()));
+    if let Some(w) = app.get_webview_window(LABEL) {
+        glass(&w);
+    }
 }
+
+/// Liquid Glass on macOS 26+; the classic materials render near-opaque there. Older macOS gets sidebar vibrancy.
+fn glass(w: &WebviewWindow) {
+    use window_vibrancy::{
+        LiquidGlassOptions, NSGlassEffectViewStyle, NSVisualEffectMaterial, NSVisualEffectState,
+        apply_liquid_glass, apply_vibrancy,
+    };
+    let opts = LiquidGlassOptions::new(NSGlassEffectViewStyle::Regular).radius(RADIUS);
+    if let Err(e) = apply_liquid_glass(w, opts) {
+        log::debug!("liquid glass unavailable ({e}); using vibrancy");
+        let state = Some(NSVisualEffectState::Active);
+        if let Err(e) = apply_vibrancy(w, NSVisualEffectMaterial::Sidebar, state, Some(RADIUS)) {
+            warn!("panel vibrancy failed: {e}");
+        }
+    }
+}
+
+const RADIUS: f64 = 10.0;
 
 /// Physical monitor frames with their scales. The list is empty while a display sleeps: fall back to the primary.
 fn monitors(app: &AppHandle) -> Option<Vec<(place::Frame, f64)>> {

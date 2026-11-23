@@ -26,8 +26,7 @@
         "skipTaskbar": true,
         "shadow": true,
         "focus": false,
-        "acceptFirstMouse": true,
-        "windowEffects": { "effects": ["sidebar"], "state": "active", "radius": 10 }
+        "acceptFirstMouse": true
       }
     ],
     "security": {

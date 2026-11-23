@@ -136,10 +136,9 @@ mod tests {
         assert_eq!(w["alwaysOnTop"], true);
         assert_eq!(w["visibleOnAllWorkspaces"], true);
         assert_eq!(w["acceptFirstMouse"], true);
-        assert_eq!(
-            w["windowEffects"],
-            serde_json::json!({ "effects": ["sidebar"], "state": "active", "radius": 10 })
-        );
+        assert_eq!(w["transparent"], true);
+        // the material is applied in code (panel::glass): config windowEffects cannot do Liquid Glass
+        assert!(w["windowEffects"].is_null());
         assert_eq!(c["app"]["macOSPrivateApi"], true);
         assert_eq!(
             c["app"]["security"]["csp"],
