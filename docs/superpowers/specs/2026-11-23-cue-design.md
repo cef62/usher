@@ -1,7 +1,7 @@
 # cue: design
 
 - Date: 2026-11-23
-- Status: Draft, awaiting owner approval
+- Status: Approved by owner 2026-11-23
 - Repo: `cef62/cue` · bundle id `com.cef62.cue` · working dir `/Volumes/Dev/matteo/macos-audio-priority`
 
 Marks used below:
@@ -43,6 +43,7 @@ cue is a from-scratch rewrite with three aims:
 10. Same repo setup, agent config, CI, release and updater as hop (owner, ADR 0001, ADR 0002).
 11. Hidden-device awareness: the active device is always shown, even if it is hidden or flagged
     "never use".
+12. Logging from the first commit, plus a debug mode that adds detail (owner; §5.11, ADR 0004).
 
 **Non-goals (v1):**
 
@@ -195,6 +196,63 @@ When no state file exists **(call)**, cue seeds the lists as follows:
 Because the current default is ranked first, the first reconcile does nothing. cue never switches
 your audio just because it was launched.
 
+### 5.11 Logging and debug mode (owner; details are calls, ADR 0004)
+
+**Where logs go**
+
+- All Rust code logs through the `log` facade, and `tauri-plugin-log` writes the output.
+- The log file is `~/Library/Logs/com.cef62.cue/cue.log`. It rotates at 1 MB and keeps 5 files.
+- The frontend's `console` output is forwarded to the same file.
+
+**Keeping core pure**
+
+- `cue-core` does no I/O. `reconcile()` returns its actions together with a `Vec<Reason>`: for each
+  role, the desired device, the current device, and why each higher-ranked device was skipped
+  (disconnected, not alive, never use, no streams).
+- The engine is what logs these reasons.
+
+**Normal level (info): one line per event that matters**
+
+- every default set, with its result;
+- loop guard trips;
+- alias merges and forgets;
+- coreaudiod restarts and each rebind attempt;
+- a corrupt state file moved aside;
+- update checks;
+- toggles of auto-switch and debug mode.
+
+Errors go at `error`, unexpected but recovered cases at `warn`.
+
+**Debug mode adds (debug, cue crates only)**
+
+- every raw CoreAudio event, and how events were coalesced;
+- a full device snapshot on each enumeration: UID, name, transport, alive, hidden, stream counts per
+  scope, and alias family;
+- the full `Reason` list on every reconcile, including no-ops;
+- reconcile timing;
+- each state save.
+
+**How to turn on debug mode**
+
+- A "Debug logging" toggle in Settings, persisted in state. It changes the level at runtime, without
+  a restart.
+- The `CUE_LOG=debug` environment variable, for development.
+- Debug builds default to debug.
+
+**Panel and Settings**
+
+- When debug mode is on, the panel footer shows a small "Debug" badge, so it is never left on by
+  accident.
+- Settings has "Show log in Finder".
+
+**Privacy**
+
+- Logs never leave the Mac.
+- Device names can contain personal names ("Matteo's AirPods"), and they are logged as they are.
+  This is acceptable because the file is local.
+
+**Not in v1:** copy-diagnostics and redaction.
+
 ## 6. Architecture
 
 See `docs/architecture/overview.md` for the diagrams. The Cargo workspace has three crates and a
@@ -268,6 +326,7 @@ The settings window has one pane:
 
 - Open at login, showing the approval state.
 - Check for updates daily, plus a "Check now" button.
+- Debug logging, plus "Show log in Finder" (§5.11).
 - Version.
 
 ## 8. Repo setup (mirrors hop)
@@ -319,7 +378,8 @@ Until those steps are done:
   - new device placement and virtual devices flagged "never use";
   - alias merge, the ambiguity latch and the zero UUID;
   - forget across all structures;
-  - state round-trip, corrupt-file recovery and unknown-key preservation.
+  - state round-trip, corrupt-file recovery and unknown-key preservation;
+  - `Reason` output for each skip cause.
 - **Engine (`src-tauri`):** tested against a `FakeAudioSystem` that implements the trait:
   - event coalescing;
   - applying actions;

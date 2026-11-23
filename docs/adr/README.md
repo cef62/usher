@@ -33,3 +33,4 @@ What gets easier, what gets harder, what we must now do.
 | [0001](0001-tauri-stack.md) | Tauri 2 (Rust core + React panel) instead of Swift | Accepted |
 | [0002](0002-update-mechanism.md) | Reuse hop's update mechanism; defer Developer ID notarization | Accepted |
 | [0003](0003-strict-priority-policy.md) | Strict priority: always enforce the top connected device | Accepted |
+| [0004](0004-logging-and-debug-mode.md) | Logging and debug mode from day one | Accepted |
