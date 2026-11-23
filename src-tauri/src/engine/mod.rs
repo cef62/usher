@@ -144,9 +144,10 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         }
         if self.reconcile_due.is_some_and(|d| d <= now) {
             self.reconcile_due = None;
-            // this scan is the recheck: never scan twice back to back
-            self.usb_due = None;
-            self.usb_rechecked = true;
+            // a recheck that is already due would scan twice back to back
+            if self.usb_due.is_some_and(|d| d <= now) {
+                self.usb_due = None;
+            }
             self.run_reconcile(now);
         }
         if self.usb_due.is_some_and(|d| d <= now) {

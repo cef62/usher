@@ -47,7 +47,7 @@ fn launch_without_file_seeds_saves_and_switches_nothing() {
 }
 
 #[test]
-fn coalesced_reconcile_cancels_pending_usb_recheck() {
+fn due_usb_recheck_is_absorbed_by_the_coalesced_reconcile() {
     let d = tempfile::tempdir().unwrap();
     let fake = trio();
     fake.world().usb_unresolved = true;
@@ -55,7 +55,7 @@ fn coalesced_reconcile_cancels_pending_usb_recheck() {
     e.handle(Event::Audio(AudioEvent::DevicesChanged), at(400));
     e.tick(at(600));
     assert_eq!(fake.world().scans, 2);
-    assert_eq!(e.next_due(), None);
+    assert_eq!(e.next_due(), Some(at(1_100)));
 }
 
 #[test]
@@ -224,4 +224,18 @@ fn quit_flushes_and_stops() {
     assert!(matches!(e.handle(Event::Quit(tx), at(1_001)), Flow::Stop));
     rx.recv().unwrap();
     assert!(!read_state(d.path()).auto_switch);
+}
+
+#[test]
+fn usb_plugged_after_launch_gets_its_rescan() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    let (mut e, _) = boot(fake.clone(), d.path());
+    fake.world().usb_unresolved = true;
+    e.handle(Event::Audio(AudioEvent::DevicesChanged), at(1_000));
+    e.tick(at(1_150));
+    e.tick(at(1_650));
+    assert_eq!(fake.world().scans, 3);
+    e.tick(at(3_000));
+    assert_eq!(fake.world().scans, 3);
 }

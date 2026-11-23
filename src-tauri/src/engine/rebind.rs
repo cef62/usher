@@ -26,14 +26,19 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         self.rebind_attempt = 0;
         self.rebind_due = Some(now);
         self.reconcile_due = None;
+        // devices may have changed during the restart; the post-rebind scan may schedule a fresh recheck
+        self.usb_due = None;
+        self.usb_rechecked = false;
     }
 
     /// One bind attempt (subscribe, or rebind when already subscribed) followed by a scan.
     pub(super) fn attempt_bind(&mut self, now: Instant) {
         let n = self.rebind_attempt;
         let rebinding = self.subscribed;
-        let bound = if rebinding {
+        if rebinding || n > 0 {
             info!("rebind attempt {}", n + 1);
+        }
+        let bound = if rebinding {
             self.audio.rebind()
         } else {
             self.audio.subscribe(self.notify.clone())

@@ -174,3 +174,16 @@ fn run_loop_quit_acks_and_unsubscribes() {
     t.join().unwrap();
     assert!(!fake.world().subscribed);
 }
+
+#[test]
+fn restart_cancels_pending_usb_recheck() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    fake.world().usb_unresolved = true;
+    let (mut e, _) = boot(fake.clone(), d.path());
+    fake.world().fail_rebind = 5;
+    restart(&mut e, 100);
+    e.tick(at(100));
+    e.tick(at(500));
+    assert_eq!(fake.world().scans, 1);
+}
