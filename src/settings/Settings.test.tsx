@@ -13,6 +13,7 @@ const api: typeof settingsApi = {
   get: async () => view(),
   setLogin: (on) => (calls.push(["setLogin", on]), loginResult()),
   setDebug: async (on) => void calls.push(["setDebug", on]),
+  fit: async () => {},
   revealLog: async () => void calls.push(["revealLog"]),
 };
 const checkbox = (r: Element, label: string) =>

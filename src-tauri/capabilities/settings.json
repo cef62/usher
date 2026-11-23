@@ -3,5 +3,5 @@
   "identifier": "settings",
   "description": "Settings window: forwards its console to the log. Its custom commands are guarded in lib.rs.",
   "windows": ["settings"],
-  "permissions": ["log:default"]
+  "permissions": ["log:default", "core:window:allow-set-size"]
 }

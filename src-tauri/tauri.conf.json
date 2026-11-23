@@ -27,7 +27,7 @@
         "shadow": true,
         "focus": false,
         "acceptFirstMouse": true,
-        "windowEffects": { "effects": ["popover"], "state": "active", "radius": 10 }
+        "windowEffects": { "effects": ["menu"], "state": "active", "radius": 10 }
       }
     ],
     "security": {

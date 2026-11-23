@@ -5,6 +5,7 @@ import { settingsApi } from "../api";
 import { forwardConsole } from "../log";
 import type { SettingsView } from "../types";
 import { SettingsPage } from "./Settings";
+import { fitHeight } from "../panel/logic";
 import "./settings.css";
 
 forwardConsole(console, sink);
@@ -17,6 +18,14 @@ function App() {
     load();
     window.addEventListener("focus", load);
     return () => window.removeEventListener("focus", load);
+  }, []);
+  useEffect(() => {
+    const ro = new ResizeObserver(() => {
+      const h = document.body.getBoundingClientRect().height;
+      if (h > 0) void settingsApi.fit(fitHeight(h, window.screen.availHeight)); // 0: nothing rendered yet
+    });
+    ro.observe(document.body);
+    return () => ro.disconnect();
   }, []);
   return loaded && <SettingsPage key={loaded.n} initial={loaded.view} api={settingsApi} />;
 }

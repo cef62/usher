@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(w["acceptFirstMouse"], true);
         assert_eq!(
             w["windowEffects"],
-            serde_json::json!({ "effects": ["popover"], "state": "active", "radius": 10 })
+            serde_json::json!({ "effects": ["menu"], "state": "active", "radius": 10 })
         );
         assert_eq!(c["app"]["macOSPrivateApi"], true);
         assert_eq!(
@@ -160,10 +160,13 @@ mod tests {
     }
 
     #[test]
-    fn settings_capability_grants_log_only() {
+    fn settings_capability_grants_log_and_set_size() {
         let cap: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/settings.json")).unwrap();
         assert_eq!(cap["windows"], serde_json::json!(["settings"]));
-        assert_eq!(cap["permissions"], serde_json::json!(["log:default"]));
+        assert_eq!(
+            cap["permissions"],
+            serde_json::json!(["log:default", "core:window:allow-set-size"])
+        );
     }
 }

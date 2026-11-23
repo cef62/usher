@@ -4,6 +4,7 @@ import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import type { Command, SettingsView, View } from "./types";
 
 const PANEL_WIDTH = 360;
+const SETTINGS_WIDTH = 420;
 
 export const panelApi = {
   getView: () => invoke<View | null>("get_view"),
@@ -21,5 +22,6 @@ export const settingsApi = {
   get: () => invoke<SettingsView>("get_settings"),
   setLogin: (on: boolean) => invoke<boolean>("set_login", { enabled: on }),
   setDebug: (on: boolean) => invoke<void>("set_debug", { on }),
+  fit: (contentHeight: number) => getCurrentWindow().setSize(new LogicalSize(SETTINGS_WIDTH, contentHeight)),
   revealLog: () => invoke<void>("reveal_log"),
 };

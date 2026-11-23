@@ -36,7 +36,7 @@
 
 ## Decisions the spec leaves open
 
-1. **Panel window.** Declared in `tauri.conf.json`: label `panel`, `url` `index.html`, 360×400 (the frontend sets the height), `visible: false`, `transparent: true`, `decorations: false`, `resizable: false`, `skipTaskbar: true`, `alwaysOnTop: true`, `visibleOnAllWorkspaces: true`, `acceptFirstMouse: true`, `shadow: true`, `windowEffects: { effects: ["popover"], state: "active", radius: 10 }`; `app.macOSPrivateApi: true` with the tauri feature `macos-private-api`. No NSPanel and no objc2 level change, so `src-tauri` keeps `forbid(unsafe_code)`. Known limit: over a full-screen app's Space the panel may not appear (QA row 20; upgrade path in ADR 0007).
+1. **Panel window.** Declared in `tauri.conf.json`: label `panel`, `url` `index.html`, 360×400 (the frontend sets the height), `visible: false`, `transparent: true`, `decorations: false`, `resizable: false`, `skipTaskbar: true`, `alwaysOnTop: true`, `visibleOnAllWorkspaces: true`, `acceptFirstMouse: true`, `shadow: true`, `windowEffects: { effects: ["menu"], state: "active", radius: 10 }`; `app.macOSPrivateApi: true` with the tauri feature `macos-private-api`. No NSPanel and no objc2 level change, so `src-tauri` keeps `forbid(unsafe_code)`. Known limit: over a full-screen app's Space the panel may not appear (QA row 20; upgrade path in ADR 0007).
 2. **Tray clicks.** `show_menu_on_left_click(false)`. Left click (button up) toggles the panel. Right click shows the menu: `Auto-switch` (check), `Settings…`, separator, `Quit usher`. The icon glyphs and tooltip from M3 are the spec §7.2 icon states; M4 does not change them.
 3. **Placement.** Computed at every show from `TrayIconEvent::Click.rect`: centred under the icon, 4 pt below it (`GAP`), clamped 8 pt inside the icon's display (`MARGIN`). Physical px are converted per monitor, as hop's `place` does. The anchor is not recomputed while open.
 4. **Height.** The panel's frontend measures `#root` with a `ResizeObserver` and calls `getCurrentWindow().setSize(new LogicalSize(360, fitHeight(content, screen.availHeight)))`. `fitHeight` caps at `availHeight − 48` with a floor of 120; the lists scroll inside. Needs `core:window:allow-set-size` on `panel` only.
@@ -792,7 +792,7 @@ One `DndContext` per list (no cross-list drag), `PointerSensor` with `activation
 
 - [ ] **Step 4: Implement `PanelView.tsx`, `Panel.tsx`, `panel.css` and `main.tsx`**
 
-CSS variables on `:root` (`--fg`, `--fg-dim`, `--bg`, `--sep`, `--accent`, `--danger`, `--row-h: 28px`) with a dark override under `@media (prefers-color-scheme: dark)`. Background is translucent so the `popover` effect shows. A visible `:focus-visible` ring on row and menu buttons.
+CSS variables on `:root` (`--fg`, `--fg-dim`, `--bg`, `--sep`, `--accent`, `--danger`, `--row-h: 28px`) with a dark override under `@media (prefers-color-scheme: dark)`. Background is translucent so the `menu` effect shows. A visible `:focus-visible` ring on row and menu buttons.
 
 - [ ] **Step 5: Run the tests, build and size check**
 
