@@ -6,7 +6,12 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 #[derive(Clone, PartialEq, Debug, Deserialize)]
-#[serde(tag = "kind", content = "args", rename_all = "camelCase")]
+#[serde(
+    tag = "kind",
+    content = "args",
+    rename_all = "camelCase",
+    deny_unknown_fields
+)]
 pub enum Command {
     Reorder {
         role: Role,
