@@ -1,4 +1,4 @@
-//! In-app updates, ported from hop: a check 30 s after launch, then daily while the daily check is on; a manual check
+//! In-app updates: a check 30 s after launch, then daily while the daily check is on; a manual check
 //! from Settings and the menu-bar icon; install on request from the What's new window. Delivery goes through
 //! tauri-plugin-updater, which verifies the package against the minisign public key in `tauri.conf.json` (with
 //! `requireSignedVersion`). Nothing pops up by itself: a found update shows in the panel view and as the menu item.
@@ -172,9 +172,8 @@ fn spawn_checker(app: AppHandle) {
             if due(daily_on(&app), since) {
                 // a background failure is never shown (offline, GitHub down, a manual check running): one log line,
                 // and the next wake tries again instead of waiting a day
-                match tauri::async_runtime::block_on(check(&app)) {
-                    Ok(_) => last = Some((SystemTime::now(), Instant::now())),
-                    Err(e) => log::warn!("update check failed: {e}"),
+                if tauri::async_runtime::block_on(check(&app)).is_ok() {
+                    last = Some((SystemTime::now(), Instant::now())); // a failure was logged by check()
                 }
             }
             std::thread::sleep(WAKE_POLL);
@@ -201,7 +200,14 @@ pub async fn check(app: &AppHandle) -> Result<Option<UpdateInfo>, String> {
     .await;
     let mut st = state(app);
     st.busy = false;
-    let update = result.map_err(|e| e.to_string())?;
+    let update = result.map_err(|e| {
+        log::warn!("update check failed: {e}");
+        e.to_string()
+    })?;
+    match &update {
+        Some(u) => log::info!("update check: usher {} available", u.version),
+        None => log::info!("update check: up to date"),
+    }
     let info = update.as_ref().map(UpdateInfo::from);
     if info.is_some() {
         set_phase(&mut st, Phase::Idle); // a fresh update: an earlier failure is over

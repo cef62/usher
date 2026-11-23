@@ -73,7 +73,7 @@ fn fail(st: &mut UpdateState, dir: Option<&std::path::Path>, e: &str) {
     if let Some(d) = dir {
         instance::clear_restart_mark(d);
     }
-    log::warn!("update install failed: {e}");
+    log::error!("update install failed: {e}");
     set_phase(
         st,
         Phase::Failed {
@@ -86,6 +86,7 @@ fn fail(st: &mut UpdateState, dir: Option<&std::path::Path>, e: &str) {
 /// since is refused, so it is never installed unseen.
 pub async fn install(app: &AppHandle, expected: &str) -> Result<(), String> {
     let update = claim(app, expected)?;
+    log::info!("installing usher {}", update.version);
     let dir = app.path().app_data_dir().ok();
     let result = download(app, &update, dir.as_deref()).await;
     let mut st = state(app);

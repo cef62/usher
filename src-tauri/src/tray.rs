@@ -49,7 +49,7 @@ fn build_menu(
     Ok((menu, auto, updates))
 }
 
-/// The menu-bar icon: left click opens the panel, right click shows Auto-switch, Settings… and Quit.
+/// The menu-bar icon: left click opens the panel, right click shows Auto-switch, Settings…, Check for Updates… and Quit.
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let (menu, auto, updates) = build_menu(app)?;
     app.manage(LastAuto(AtomicBool::new(true)));
