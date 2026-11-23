@@ -62,12 +62,12 @@ sequenceDiagram
   participant S as AudioSystem
   participant UI as Panel
 
-  CA->>L: DevicesChanged / DefaultChanged
+  CA->>L: DevicesChanged / DefaultChanged / ServiceRestarted -> rebind
   L->>E: Event (channel send only)
   Note over E: coalesce 150 ms
   E->>S: enumerate() + current defaults
-  E->>C: reconcile(devices, state, now)
-  C-->>E: Vec<Action> (Merge alias, AddDevice, SetDefault, PauseAuto)
+  E->>C: reconcile(state, runtime, snapshot, now)
+  C-->>E: Outcome {actions: SetDefault | PauseAuto | AliasMerged | Persist, reasons}
   E->>S: set_default(role, uid)
   S->>CA: AudioObjectSetPropertyData
   CA-->>L: DefaultChanged (our echo)
@@ -76,6 +76,13 @@ sequenceDiagram
   C-->>E: [] (desired == current)
   E->>UI: state-changed(PanelState)
 ```
+
+Timers on the engine thread:
+
+- coalesce 150 ms;
+- save 500 ms;
+- USB recheck 500 ms;
+- rebind backoff 1/2/4/8/16/60 s.
 
 ## Auto-switch state
 

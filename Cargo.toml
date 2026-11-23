@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/usher-core", "src-tauri"]
+members = ["crates/usher-core", "crates/usher-coreaudio", "src-tauri"]
 
 [workspace.package]
 version = "0.1.0"

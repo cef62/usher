@@ -16,6 +16,10 @@ tauri-build = { version = "2.7.6", features = [] }
 tauri = { version = "2.12.7", features = ["tray-icon", "image-png"] }
 tauri-plugin-log = "2.10.2"
 log = "0.4.35"
+usher-core = { path = "../crates/usher-core" }
+usher-coreaudio = { path = "../crates/usher-coreaudio" }
+serde = { version = "1.0.229", features = ["derive"] }
+tauri-plugin-notification = "2.8.1"
 
 [dev-dependencies]
 tempfile = "3.27.0"
