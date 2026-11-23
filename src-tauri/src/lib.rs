@@ -3,6 +3,7 @@
 pub mod engine;
 mod instance;
 mod logging;
+mod panel;
 mod shell;
 pub mod store;
 mod tray;
@@ -31,6 +32,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
     let (handle, rx) = EngineHandle::new();
     app.manage(handle.clone());
+    panel::setup(app.handle());
     if let Err(e) = tray::build(app.handle()) {
         // an agent app without a tray has no UI and no way to quit
         log::error!("no menu-bar icon ({e})");
@@ -61,6 +63,14 @@ pub fn run() {
         .plugin(logging::plugin())
         .plugin(tauri_plugin_notification::init())
         .setup(setup)
+        .on_window_event(|w, ev| {
+            if let tauri::WindowEvent::Focused(f) = ev
+                && w.label() == panel::LABEL
+            {
+                panel::focus_changed(w.app_handle(), *f);
+            }
+        })
+        .invoke_handler(tauri::generate_handler![panel::hide_panel])
         .build(tauri::generate_context!())
         .expect("error while running usher");
     // right after build, not in setup: tao logs TRACE from applicationDidFinishLaunching before setup runs, and the
@@ -91,5 +101,32 @@ mod tests {
         assert_eq!(c["bundle"]["macOS"]["minimumSystemVersion"], "14.0");
         assert_eq!(c["bundle"]["macOS"]["signingIdentity"], "-");
         assert!(c["plugins"]["updater"].is_null(), "updater is M5");
+    }
+
+    #[test]
+    fn panel_window_and_capabilities_are_pinned() {
+        let c: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let w = &c["app"]["windows"][0];
+        assert_eq!(w["label"], "panel");
+        assert_eq!(w["visible"], false);
+        assert_eq!(w["width"], 360);
+        assert_eq!(c["app"]["macOSPrivateApi"], true);
+        assert_eq!(
+            c["app"]["security"]["csp"],
+            "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+        );
+        let cap: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+        assert_eq!(cap["windows"], serde_json::json!(["panel"]));
+        assert_eq!(
+            cap["permissions"],
+            serde_json::json!([
+                "log:default",
+                "core:event:allow-listen",
+                "core:event:allow-unlisten",
+                "core:window:allow-set-size"
+            ])
+        );
     }
 }
