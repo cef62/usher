@@ -12,7 +12,7 @@ one or more PRs, following the hop workflow (feature branch, quality gate, adver
 | M2 | Core domain | `2026-11-23-usher-m2-core.md` | `usher-core` covers everything in spec §5 and is fully unit-tested: the model, `desired`, `reconcile` with `Reason`s, the loop guard, the new-device and first-launch seeding, the alias registry, forget, and state serde. | M1 workspace |
 | M3 | Audio engine | `2026-11-23-usher-m3-engine.md` | `usher-coreaudio` and the engine thread. The JSON store is wired in. The app switches devices for real with no panel: the tray menu has the auto-switch toggle. Also coreaudiod rebind and loop-guard notifications. Usable day to day. | M1, M2 |
 | M4 | Panel and settings | `2026-11-23-usher-m4-panel.md` | The tray-anchored panel (React, dnd-kit, keyboard), the Settings window (login, debug toggle, show log), and the icon states. | M3 |
-| M5 | Updates and release | (later) | The updater, What's new and the release workflows from hop, plus the owner prerequisites (repo, key, secrets). First release. | M4 |
+| M5 | Updates and release | `2026-11-23-usher-m5-release.md` | The updater, What's new and the release workflows from hop, plus the owner prerequisites (repo, key, secrets). First release. | M4 |
 
 ## Shared conventions (all plans)
 

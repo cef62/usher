@@ -24,7 +24,14 @@ Dev and installed builds share the identifier and lock on macOS: quit the instal
 
 ### Testing updates against a local feed
 
-Added in M5 with the updater and release workflows.
+Development builds never check for updates; release builds read the feed and key from `tauri.conf.json`. To test against a local feed, override them at build time only (a test in `update/mod.rs` keeps the committed config on the signed GitHub feed). Never use `~/.tauri/usher.key` for this: make a throwaway key under `/tmp/usher-test/`.
+
+Both `--config` overrides set `"identifier":"com.cef62.usher.updatetest"`, so the test copy has its own app data, log folder and instance lock and never touches the installed usher's `state.json`. Never toggle Open at login in the test copy: it shares the LaunchAgent name.
+
+1. `pnpm tauri signer generate --ci -p "" -w /tmp/usher-test/test.key`
+2. Build the new version, signed with that key: `TAURI_SIGNING_PRIVATE_KEY="$(cat /tmp/usher-test/test.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" pnpm tauri build --bundles app --config "$CONF"` with `CONF` = `{"identifier":"com.cef62.usher.updatetest","version":"0.0.2","bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"<test.key.pub>","endpoints":["http://127.0.0.1:8765/latest.json"],"dangerousInsecureTransportProtocol":true}}}`. Keep `usher.app.tar.gz` and its `.sig`.
+3. Build the current version with the same `plugins` override, the same identifier and `createUpdaterArtifacts: false`, and copy `usher.app` to a folder whose path contains `/target/release/` (so it never touches the installed app's login item).
+4. Serve `latest.json` (`{"version":"0.0.2","notes":"…","platforms":{"darwin-aarch64":{"signature":"<.sig contents>","url":"http://127.0.0.1:8765/usher.app.tar.gz"}}}`) and the package on port 8765, quit the installed usher, and run the copy from step 3.
 
 ## Pull requests
 
@@ -45,4 +52,12 @@ Every PR gets an adversarial review before merge, on top of CI. The reviewer's j
 
 ## Releases
 
-Added in M5 with the updater and release workflows.
+Versions are managed with [Changesets](https://github.com/changesets/changesets): merging a PR with a changeset makes the bot open (or update) a **Version Packages** PR; merging that PR bumps the version, writes `CHANGELOG.md`, tags `vX.Y.Z` and dispatches `build-release.yml`. Never edit versions or create tags by hand.
+
+Releases are **immutable** once published (the repository has release immutability on): a published release's assets and its tag can't be changed, re-uploaded or deleted. `build-release.yml` therefore does all asset work on a draft and publishes only when `latest.json` lists every platform. If a platform job fails, re-run it while the release is still a draft (`gh run rerun <run-id> --failed`). If every build passed but `publish` refused because `latest.json` misses a platform, re-run the whole workflow (`gh run rerun <run-id>`, without `--failed`) so each platform writes its entry again. A broken published release is never fixed in place: ship a new patch version.
+
+The `publish` job runs `scripts/check-feed.mjs` and refuses a feed signed by another key than the one in `tauri.conf.json`; fix the key or the secret, then re-run the workflow. The check reads key IDs only (ADR 0008).
+
+Release builds sign the updater artifacts with the key in the repository secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; the public key is in `src-tauri/tauri.conf.json`. Never lose or commit the private key: installed apps only accept updates signed with it. Never rotate it after the first release: every installed copy would refuse the next update.
+
+`pnpm build:app` is unsigned and for local checks only; the bundle lands at `target/aarch64-apple-darwin/release/bundle/macos/usher.app`. Signed builds exist only in CI.
