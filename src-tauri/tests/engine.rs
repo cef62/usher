@@ -233,7 +233,10 @@ fn failed_scan_at_launch_leaves_state_unseeded_and_drops_commands() {
     fake.world().fail_scan = 1;
     let (mut e, _) = boot(fake, d.path());
     assert_eq!(e.saves(), 0);
-    e.handle(Event::Command(usher_core::Command::SetDebug(true)), at(10));
+    e.handle(
+        Event::Command(usher_core::Command::SetDebug(true), None),
+        at(10),
+    );
     assert!(!e.state().debug);
 }
 

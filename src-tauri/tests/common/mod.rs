@@ -111,6 +111,7 @@ pub enum Call {
     View(PanelView),
     Auto(bool),
     Paused(PausedReason),
+    Debug(bool),
 }
 
 #[derive(Clone, Default)]
@@ -135,6 +136,9 @@ impl Shell for Recorder {
     }
     fn auto_switch_changed(&self, on: bool) {
         self.0.lock().unwrap().push(Call::Auto(on));
+    }
+    fn debug_changed(&self, on: bool) {
+        self.0.lock().unwrap().push(Call::Debug(on));
     }
     fn paused(&self, reason: &PausedReason) {
         self.0.lock().unwrap().push(Call::Paused(reason.clone()));

@@ -27,6 +27,8 @@ impl Shell for TauriShell {
         tray::set_auto(&self.0, on);
     }
 
+    fn debug_changed(&self, _on: bool) {}
+
     fn paused(&self, reason: &PausedReason) {
         let app = self.0.clone();
         let body = reason.message();
