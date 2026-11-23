@@ -1,0 +1,100 @@
+/* What's new: the Settings window's sheet (settings.css: colors, groups, rows) plus the parts only this window has. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+.page {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100%;
+}
+
+main {
+  overflow-y: auto;
+}
+
+.hero {
+  padding: 16px 0 4px;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.versions,
+.detail,
+.more {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* a note per row: title, then its detail lines */
+.items .row,
+.row.text {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.more {
+  font-size: 11px;
+  margin-left: 10px;
+}
+
+code {
+  font: 12px ui-monospace, Menlo, monospace;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--group);
+}
+
+.status {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.status progress {
+  width: 100%;
+}
+
+.status.failed {
+  color: var(--error);
+  -webkit-user-select: text; /* an error can be copied into a report */
+  user-select: text;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

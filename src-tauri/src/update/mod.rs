@@ -290,6 +290,12 @@ mod tests {
     }
 
     #[test]
+    fn the_whatsnew_window_knows_the_stale_install_errors() {
+        let api = include_str!("../../../src/whatsnew/api.ts");
+        assert!(api.contains(&format!("\"{NO_UPDATE}\"")) && api.contains(&format!("\"{NEWER}\"")));
+    }
+
+    #[test]
     fn install_refuses_a_stale_or_missing_update() {
         assert_eq!(stale(None, "0.2.0"), Some(NO_UPDATE));
         assert_eq!(stale(Some("0.3.0"), "0.2.0"), Some(NEWER));
