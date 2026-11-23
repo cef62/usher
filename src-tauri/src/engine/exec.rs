@@ -9,12 +9,13 @@ use usher_coreaudio::AudioSystem;
 use super::{Engine, Shell, USB_RECHECK};
 
 impl<A: AudioSystem, S: Shell> Engine<A, S> {
-    pub(super) fn run_reconcile(&mut self, now: Instant) {
+    /// `false` when the scan failed.
+    pub(super) fn run_reconcile(&mut self, now: Instant) -> bool {
         let scan = match self.audio.scan() {
             Ok(s) => s,
             Err(e) => {
                 warn!("scan failed: {e}");
-                return;
+                return false;
             }
         };
         let snap = scan.snapshot;
@@ -38,6 +39,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         }
         self.snap = Some(snap);
         self.emit();
+        true
     }
 
     fn execute(&mut self, out: &Outcome, snap: &Snapshot, now: Instant) {
@@ -67,7 +69,10 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     fn set_one(&mut self, role: Role, key: &DeviceKey, snap: &Snapshot) {
         let name = self.name_of(snap, key);
         match self.audio.set_default(role, key) {
-            Ok(()) => info!("set {role} default to {name} ({key}): ok"),
+            Ok(()) => {
+                info!("set {role} default to {name} ({key}): ok");
+                *self.errors.get_mut(role) = None;
+            }
             Err(e) => {
                 error!("set {role} default to {name} ({key}) failed: {e}");
                 *self.errors.get_mut(role) = Some(format!("couldn't switch {role} to {name}: {e}"));

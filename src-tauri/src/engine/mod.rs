@@ -3,11 +3,16 @@
 //! every entry point takes `now`, so tests drive time by hand.
 
 mod exec;
+mod rebind;
+mod thread;
+
+pub use rebind::retry_delay;
+pub use thread::{EngineHandle, run};
 
 use std::sync::mpsc::Sender;
 use std::time::{Duration, Instant};
 
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use serde::Serialize;
 use usher_core::{
     Command, PanelState, PausedReason, PerRole, Runtime, Snapshot, State, Timestamp, apply,
@@ -74,6 +79,10 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     usb_due: Option<Instant>,
     /// A recheck ran since the last device event: do not schedule another.
     usb_rechecked: bool,
+    notify: Notify,
+    subscribed: bool,
+    rebind_due: Option<Instant>,
+    rebind_attempt: u32,
 }
 
 impl<A: AudioSystem, S: Shell> Engine<A, S> {
@@ -100,19 +109,15 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             reconcile_due: None,
             usb_due: None,
             usb_rechecked: false,
+            notify,
+            subscribed: false,
+            rebind_due: None,
+            rebind_attempt: 0,
         };
-        e.launch(notify, now);
+        e.attempt_bind(now);
         e.shell.auto_switch_changed(e.state.auto_switch);
         e.emit();
         e
-    }
-
-    /// Task 7 hook: backoff on a failed subscribe or scan goes here.
-    fn launch(&mut self, notify: Notify, now: Instant) {
-        match self.audio.subscribe(notify) {
-            Ok(()) => self.run_reconcile(now),
-            Err(e) => error!("could not subscribe to audio events: {e}"),
-        }
     }
 
     pub fn handle(&mut self, ev: Event, now: Instant) -> Flow {
@@ -124,8 +129,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 self.on_command(Command::SetAutoSwitch(on), now);
             }
             Event::Quit(done) => {
-                self.audio.unsubscribe();
-                self.store.flush(&self.state);
+                self.shutdown();
                 let _ = done.send(());
                 return Flow::Stop;
             }
@@ -134,8 +138,15 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     }
 
     pub fn tick(&mut self, now: Instant) {
+        if self.rebind_due.is_some_and(|d| d <= now) {
+            self.rebind_due = None;
+            self.attempt_bind(now);
+        }
         if self.reconcile_due.is_some_and(|d| d <= now) {
             self.reconcile_due = None;
+            // this scan is the recheck: never scan twice back to back
+            self.usb_due = None;
+            self.usb_rechecked = true;
             self.run_reconcile(now);
         }
         if self.usb_due.is_some_and(|d| d <= now) {
@@ -147,10 +158,15 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     }
 
     pub fn next_due(&self) -> Option<Instant> {
-        [self.reconcile_due, self.usb_due, self.store.due()]
-            .into_iter()
-            .flatten()
-            .min()
+        [
+            self.reconcile_due,
+            self.usb_due,
+            self.rebind_due,
+            self.store.due(),
+        ]
+        .into_iter()
+        .flatten()
+        .min()
     }
 
     pub fn state(&self) -> &State {
@@ -184,10 +200,21 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     }
 
     fn schedule_reconcile(&mut self, now: Instant) {
+        if self.rebind_due.is_some() {
+            return;
+        }
         self.reconcile_due.get_or_insert(now + COALESCE);
     }
 
     fn on_audio(&mut self, ev: AudioEvent, now: Instant) {
+        if ev == AudioEvent::ServiceRestarted {
+            self.begin_rebind(now);
+            return;
+        }
+        if self.rebind_due.is_some() {
+            debug!("ignored {ev:?}: rebind pending");
+            return;
+        }
         if self.reconcile_due.is_some() {
             debug!("coalesced {ev:?}");
         } else {

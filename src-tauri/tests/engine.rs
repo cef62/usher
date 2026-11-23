@@ -38,13 +38,24 @@ fn failing_pods(dir: &std::path::Path) -> (usher_lib::engine::Engine<Fake, Recor
 fn launch_without_file_seeds_saves_and_switches_nothing() {
     let d = tempfile::tempdir().unwrap();
     let fake = trio();
+    // a reconcile before the seed would see pods as the unranked newcomer and switch
+    fake.world().current.output = Some("AirPods-uid".into());
     let (e, _) = boot(fake.clone(), d.path());
     assert_eq!(e.saves(), 1);
-    assert_eq!(
-        read_state(d.path()).output.order[0].as_str(),
-        "BuiltInSpeakerDevice"
-    );
     assert!(fake.world().sets.is_empty());
+    assert_eq!(read_state(d.path()).output.order[0].as_str(), "AirPods-uid");
+}
+
+#[test]
+fn coalesced_reconcile_cancels_pending_usb_recheck() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    fake.world().usb_unresolved = true;
+    let (mut e, _) = boot(fake.clone(), d.path());
+    e.handle(Event::Audio(AudioEvent::DevicesChanged), at(400));
+    e.tick(at(600));
+    assert_eq!(fake.world().scans, 2);
+    assert_eq!(e.next_due(), None);
 }
 
 #[test]
