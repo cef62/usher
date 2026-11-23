@@ -1,0 +1,20 @@
+[package]
+name = "usher-coreaudio"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "usher's safe CoreAudio binding"
+
+[lib]
+name = "usher_coreaudio"
+
+[lints]
+workspace = true
+
+[dependencies]
+usher-core = { path = "../usher-core" }
+log = "0.4.35"
+objc2-core-audio = "0.3.2"
+objc2-core-foundation = { version = "0.3.2", features = ["CFString", "CFNumber"] }
+objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc"] }
+block2 = "0.6.2"
