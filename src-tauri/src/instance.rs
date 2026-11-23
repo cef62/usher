@@ -50,8 +50,6 @@ const RESTART_MARK: &str = "restart-update";
 const RESTART_MARK_TTL: Duration = Duration::from_secs(600);
 
 /// Written when an update is downloaded and about to install; the relaunch reads it (`lock_wait`) and consumes it.
-// first caller is the updater (M5 task 3)
-#[allow(dead_code)]
 pub fn mark_restart(dir: &Path) {
     std::fs::write(dir.join(RESTART_MARK), b"").ok();
 }
@@ -99,6 +97,18 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         assert!(hold_instance_lock(tmp.path(), Duration::ZERO));
         assert!(!hold_instance_lock(tmp.path(), Duration::ZERO));
+    }
+
+    #[test]
+    fn a_refused_second_holder_waited_out_its_wait() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(hold_instance_lock(tmp.path(), Duration::ZERO));
+        let t = Instant::now();
+        assert!(!hold_instance_lock(tmp.path(), Duration::from_millis(300)));
+        assert!(
+            t.elapsed() >= Duration::from_millis(300),
+            "the relaunch waits before giving up"
+        );
     }
 
     #[test]

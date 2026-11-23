@@ -10,6 +10,7 @@ mod settings;
 mod shell;
 pub mod store;
 mod tray;
+pub mod update;
 
 use std::time::Duration;
 
@@ -45,6 +46,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     app.manage(handle.clone());
     app.manage(shell::LastView(Mutex::new(None)));
     panel::setup(app.handle());
+    update::setup(app.handle());
     if let Err(e) = tray::build(app.handle()) {
         // an agent app without a tray has no UI and no way to quit
         log::error!("no menu-bar icon ({e})");
@@ -71,9 +73,8 @@ fn log_panics() {
     }));
 }
 
-pub fn run() {
-    log_panics();
-    let mut app = tauri::Builder::default()
+fn builder() -> tauri::Builder<tauri::Wry> {
+    tauri::Builder::default()
         .plugin(logging::plugin())
         .plugin(tauri_plugin_notification::init())
         .plugin(
@@ -81,6 +82,8 @@ pub fn run() {
                 .app_name(login::AUTOSTART_NAME)
                 .build(),
         )
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(setup)
         .on_window_event(|w, ev| {
             if let tauri::WindowEvent::Focused(f) = ev
@@ -98,8 +101,14 @@ pub fn run() {
             settings::get_settings,
             login::set_login,
             settings::set_debug,
-            settings::reveal_log
+            settings::reveal_log,
+            update::check_update
         ]))
+}
+
+pub fn run() {
+    log_panics();
+    let mut app = builder()
         .build(tauri::generate_context!())
         .expect("error while running usher");
     // right after build, not in setup: tao logs TRACE from applicationDidFinishLaunching before setup runs, and the
@@ -129,7 +138,6 @@ mod tests {
         assert_eq!(c["productName"], "usher");
         assert_eq!(c["bundle"]["macOS"]["minimumSystemVersion"], "14.0");
         assert_eq!(c["bundle"]["macOS"]["signingIdentity"], "-");
-        assert!(c["plugins"]["updater"].is_null(), "updater is M5");
     }
 
     #[test]

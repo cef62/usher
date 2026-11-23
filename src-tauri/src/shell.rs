@@ -18,16 +18,32 @@ use crate::{logging, tray};
 /// The engine's last view, for a window that opens after the event (`get_view`, `get_settings`).
 pub struct LastView(pub Mutex<Option<PanelView>>);
 
+/// Adds the pending update to `view`, remembers it as the last view and sends it to the windows.
+pub fn publish(app: &AppHandle, mut view: PanelView) {
+    view.update = crate::update::pending(app);
+    if let Some(last) = app.try_state::<LastView>() {
+        *last.0.lock().unwrap_or_else(|p| p.into_inner()) = Some(view.clone());
+    }
+    if let Err(e) = app.emit("state-changed", &view) {
+        warn!("state-changed emit failed ({e})");
+    }
+}
+
+/// Publishes the last view again: the pending update changed, the engine's state did not.
+pub fn republish(app: &AppHandle) {
+    let last = app
+        .try_state::<LastView>()
+        .and_then(|l| l.0.lock().unwrap_or_else(|p| p.into_inner()).clone());
+    if let Some(view) = last {
+        publish(app, view);
+    }
+}
+
 pub struct TauriShell(AppHandle);
 
 impl Shell for TauriShell {
     fn state_changed(&self, view: &PanelView) {
-        if let Some(last) = self.0.try_state::<LastView>() {
-            *last.0.lock().unwrap_or_else(|p| p.into_inner()) = Some(view.clone());
-        }
-        if let Err(e) = self.0.emit("state-changed", view) {
-            warn!("state-changed emit failed ({e})");
-        }
+        publish(&self.0, view.clone());
     }
 
     fn auto_switch_changed(&self, on: bool) {

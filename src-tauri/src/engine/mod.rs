@@ -54,6 +54,8 @@ pub struct PanelView {
     pub errors: PerRole<Option<String>>,
     /// The state file is from a newer usher: changes are not saved.
     pub read_only: bool,
+    /// The version waiting to install; set by the shell on publish, never by the engine.
+    pub update: Option<String>,
 }
 
 pub struct Clock {
@@ -208,6 +210,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             panel: panel_state(&self.state, snap),
             errors: self.errors.clone(),
             read_only: !self.store.writable(),
+            update: None,
         }
     }
 

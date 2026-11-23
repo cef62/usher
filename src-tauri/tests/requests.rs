@@ -277,6 +277,11 @@ fn update_check_off_is_saved_and_in_the_view() {
     let (mut e, _) = boot(trio(), d.path());
     assert_eq!(ask(&mut e, Command::SetUpdateCheck(false), 10), Ok(()));
     assert!(!e.view().panel.update_check);
+    assert_eq!(
+        e.view().update,
+        None,
+        "the shell sets the pending update, not the engine"
+    );
     e.tick(at(2_000));
     let saved = std::fs::read_to_string(d.path().join("state.json")).unwrap();
     assert!(saved.contains("\"update_check\": false"), "{saved}");
