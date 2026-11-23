@@ -29,9 +29,9 @@ Development builds never check for updates; release builds read the feed and key
 Both `--config` overrides set `"identifier":"com.cef62.usher.updatetest"`, so the test copy has its own app data, log folder and instance lock and never touches the installed usher's `state.json`. Never toggle Open at login in the test copy: it shares the LaunchAgent name.
 
 1. `pnpm tauri signer generate --ci -p "" -w /tmp/usher-test/test.key`
-2. Build the new version, signed with that key: `TAURI_SIGNING_PRIVATE_KEY="$(cat /tmp/usher-test/test.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" pnpm tauri build --bundles app --config "$CONF"` with `CONF` = `{"identifier":"com.cef62.usher.updatetest","version":"0.0.2","bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"<test.key.pub>","endpoints":["http://127.0.0.1:8765/latest.json"],"dangerousInsecureTransportProtocol":true}}}`. Keep `usher.app.tar.gz` and its `.sig`.
+2. Build the new version, signed with that key: `TAURI_SIGNING_PRIVATE_KEY="$(cat /tmp/usher-test/test.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" pnpm tauri build --bundles app --config "$CONF"` with `CONF` = `{"identifier":"com.cef62.usher.updatetest","version":"9.9.9","bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"<test.key.pub>","endpoints":["http://127.0.0.1:8765/latest.json"],"dangerousInsecureTransportProtocol":true}}}`. `9.9.9` stays above any real release, so the feed always offers an update. Keep `usher.app.tar.gz` and its `.sig`.
 3. Build the current version with the same `plugins` override, the same identifier and `createUpdaterArtifacts: false`, and copy `usher.app` to a folder whose path contains `/target/release/` (so it never touches the installed app's login item).
-4. Serve `latest.json` (`{"version":"0.0.2","notes":"…","platforms":{"darwin-aarch64":{"signature":"<.sig contents>","url":"http://127.0.0.1:8765/usher.app.tar.gz"}}}`) and the package on port 8765, quit the installed usher, and run the copy from step 3.
+4. Serve `latest.json` (`{"version":"9.9.9","notes":"…","platforms":{"darwin-aarch64":{"signature":"<.sig contents>","url":"http://127.0.0.1:8765/usher.app.tar.gz"}}}`) and the package on port 8765, quit the installed usher, and run the copy from step 3.
 
 ## Pull requests
 

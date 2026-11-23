@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Panel window: forwards its console to the log, listens for state-changed and panel-shown, sets its own height. Custom commands are guarded in lib.rs.",
+  "description": "Panel window: forwards its console to the log, listens for state-changed and panel-shown, sets its own height. Custom commands are guarded in commands.rs.",
   "windows": ["panel"],
   "permissions": ["log:default", "core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-set-size"]
 }

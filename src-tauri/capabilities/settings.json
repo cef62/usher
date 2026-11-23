@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "settings",
-  "description": "Settings window: forwards its console to the log. Its custom commands are guarded in lib.rs.",
+  "description": "Settings window: forwards its console to the log. Its custom commands are guarded in commands.rs.",
   "windows": ["settings"],
   "permissions": ["log:default", "core:window:allow-set-size"]
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import type { Phase, WhatsNewInfo } from "./api";
 import { headline, headlineIsFirst, parseReleaseNotes, spans, type Item } from "./notes";
 
@@ -42,6 +42,70 @@ function Items({ id, title, items, total }: { id: string; title: string; items: 
   );
 }
 
+type FooterProps = {
+  u: WhatsNewInfo["update"] | null;
+  phase: Phase;
+  busy: boolean;
+  later: RefObject<HTMLButtonElement | null>;
+  primary: RefObject<HTMLButtonElement | null>;
+  onInstall(): void;
+  onClose(): void;
+};
+
+function Footer({ u, phase, busy, later, primary, onInstall, onClose }: FooterProps) {
+  const pct = phase.kind === "downloading" && phase.total ? Math.min(100, (phase.downloaded * 100) / phase.total) : null;
+  const status = progressText(phase, u?.version ?? "");
+  return (
+    <footer className="bar">
+      {/* always mounted, so its first message is announced too */}
+      <span className="sr-only" role="status">
+        {status}
+      </span>
+      {busy ? (
+        <div className="status" aria-hidden="true">
+          <span>{status}</span>
+          {/* no value: indeterminate, while the size is unknown or the package installs */}
+          {pct === null ? <progress /> : <progress max={100} value={pct} />}
+        </div>
+      ) : phase.kind === "failed" ? (
+        <p className="status failed" role="alert">
+          {phase.message}
+        </p>
+      ) : (
+        <span className="status" />
+      )}
+      <button type="button" ref={later} onClick={onClose}>
+        {u ? "Later" : "Close"}
+      </button>
+      {u && (
+        <button type="button" ref={primary} disabled={busy} onClick={onInstall}>
+          {busy ? "Installing…" : phase.kind === "failed" ? "Try again" : "Install and restart"}
+        </button>
+      )}
+    </footer>
+  );
+}
+
+type HeroProps = { u: WhatsNewInfo["update"] | null; title: string | null; first: Item | null; heading: RefObject<HTMLHeadingElement | null> };
+
+function Hero({ u, title, first, heading }: HeroProps) {
+  return (
+    <header className="hero">
+      <h1 id="wn-title" ref={heading} tabIndex={-1}>
+        {!u ? "No update is waiting" : title ? <Text text={title} /> : `usher ${u.version} is ready`}
+      </h1>
+      {u ? (
+        <p className="versions">
+          usher {u.current_version} → {u.version}
+        </p>
+      ) : (
+        <p className="detail">The update was installed, or it is no longer available. Check again from Settings or the menu-bar icon.</p>
+      )}
+      {first && <Detail lines={first.detail} />}
+    </header>
+  );
+}
+
 type Props = { info: WhatsNewInfo | null; phase: Phase; onInstall(): void; onClose(): void };
 
 /** The release notes of the waiting update, then "Install and restart" with its progress, failure and retry. */
@@ -66,25 +130,11 @@ export function WhatsNew({ info, phase, onInstall, onClose }: Props) {
   const title = headline(notes);
   const { count } = notes;
   const parsed = count.highlights + count.fixes + count.other > 0;
-  const pct = phase.kind === "downloading" && phase.total ? Math.min(100, (phase.downloaded * 100) / phase.total) : null;
-  const status = progressText(phase, u?.version ?? "");
 
   return (
     <div className="page">
       <main aria-labelledby="wn-title">
-        <header className="hero">
-          <h1 id="wn-title" ref={heading} tabIndex={-1}>
-            {!u ? "No update is waiting" : title ? <Text text={title} /> : `usher ${u.version} is ready`}
-          </h1>
-          {u ? (
-            <p className="versions">
-              usher {u.current_version} → {u.version}
-            </p>
-          ) : (
-            <p className="detail">The update was installed, or it is no longer available. Check again from Settings or the menu-bar icon.</p>
-          )}
-          {first && <Detail lines={first.detail} />}
-        </header>
+        <Hero u={u} title={title} first={first} heading={heading} />
         <Items id="wn-new" title={first ? "Also new" : "New"} items={first ? notes.highlights.slice(1) : notes.highlights} total={count.highlights - (first ? 1 : 0)} />
         <Items id="wn-fixed" title="Fixed" items={notes.fixes} total={count.fixes} />
         <Items id="wn-other" title={count.highlights + count.fixes ? "Other changes" : "Changes"} items={notes.other} total={count.other} />
@@ -98,33 +148,7 @@ export function WhatsNew({ info, phase, onInstall, onClose }: Props) {
         )}
       </main>
 
-      <footer className="bar">
-        {/* always mounted, so its first message is announced too */}
-        <span className="sr-only" role="status">
-          {status}
-        </span>
-        {busy ? (
-          <div className="status" aria-hidden="true">
-            <span>{status}</span>
-            {/* no value: indeterminate, while the size is unknown or the package installs */}
-            {pct === null ? <progress /> : <progress max={100} value={pct} />}
-          </div>
-        ) : phase.kind === "failed" ? (
-          <p className="status failed" role="alert">
-            {phase.message}
-          </p>
-        ) : (
-          <span className="status" />
-        )}
-        <button type="button" ref={later} onClick={onClose}>
-          {u ? "Later" : "Close"}
-        </button>
-        {u && (
-          <button type="button" ref={primary} disabled={busy} onClick={onInstall}>
-            {busy ? "Installing…" : phase.kind === "failed" ? "Try again" : "Install and restart"}
-          </button>
-        )}
-      </footer>
+      <Footer u={u} phase={phase} busy={busy} later={later} primary={primary} onInstall={onInstall} onClose={onClose} />
     </div>
   );
 }

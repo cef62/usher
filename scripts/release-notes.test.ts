@@ -82,3 +82,7 @@ test("the command line prints the notes for the workflow", () => {
   const empty = execFileSync(process.execPath, [join(__dirname, "release-notes.mjs"), "0.1.0", "/dev/null"], { encoding: "utf8" });
   expect(empty).toBe(`${FALLBACK}${tail}`);
 });
+
+test("the usher install hint names /Applications/usher.app", () => {
+  expect(releaseNotes(CHANGELOG, "0.19.0")).toContain("/Applications/usher.app");
+});
