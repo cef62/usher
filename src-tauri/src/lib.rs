@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod engine;
 mod instance;
 mod logging;
 pub mod store;

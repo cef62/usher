@@ -83,14 +83,16 @@ impl Store {
     }
 
     pub fn save_if_due(&mut self, state: &State, now: Instant) {
-        if self.due.is_some_and(|d| d <= now) && !self.write(state) {
-            self.due = Some(now + SAVE_RETRY);
+        if self.due.is_some_and(|d| d <= now) {
+            self.save_now(state, now);
         }
     }
 
-    /// No clock here: a failure keeps dirty and leaves `due` as it was; the 5 s retry belongs to `save_if_due`.
-    pub fn save_now(&mut self, state: &State) {
-        self.write(state);
+    /// A failure keeps dirty and retries after `SAVE_RETRY`.
+    pub fn save_now(&mut self, state: &State, now: Instant) {
+        if !self.write(state) {
+            self.due = Some(now + SAVE_RETRY);
+        }
     }
 
     /// Best-effort final save; failure is logged and stays dirty.
@@ -125,10 +127,16 @@ impl Store {
             fs::create_dir_all(dir)?;
         }
         let tmp = self.path.with_extension("json.tmp");
-        let mut f = File::create(&tmp)?;
-        f.write_all(to_json(state).as_bytes())?;
-        f.sync_all()?;
-        fs::rename(&tmp, &self.path)
+        let res = (|| {
+            let mut f = File::create(&tmp)?;
+            f.write_all(to_json(state).as_bytes())?;
+            f.sync_all()?;
+            fs::rename(&tmp, &self.path)
+        })();
+        if res.is_err() {
+            let _ = fs::remove_file(&tmp);
+        }
+        res
     }
 }
 
@@ -164,7 +172,7 @@ mod tests {
         let p = d.path().join("state.json");
         fs::write(&p, r#"{"schema_version":1,"future_key":{"x":1}}"#).unwrap();
         let (mut s, st) = Store::open(p.clone());
-        s.save_now(&st.unwrap());
+        s.save_now(&st.unwrap(), at(0));
         let reread: Value = serde_json::from_str(&fs::read_to_string(&p).unwrap()).unwrap();
         assert_eq!(reread["future_key"], json!({"x":1}));
         assert!(!d.path().join("state.json.tmp").exists());
@@ -195,7 +203,7 @@ mod tests {
         let (mut s, st) = Store::open(p.clone());
         assert!(st.is_none());
         assert!(!s.writable());
-        s.save_now(&State::default());
+        s.save_now(&State::default(), at(0));
         assert_eq!(fs::read_to_string(&p).unwrap(), r#"{"schema_version":2}"#);
         assert_eq!(s.saves(), 0);
     }
@@ -240,6 +248,17 @@ mod tests {
         s.flush(&st); // still dirty: flush retries, fails, stays dirty
         assert_eq!(s.saves(), 0);
         assert!(s.due().is_some());
+    }
+
+    #[test]
+    fn failed_save_now_schedules_a_retry() {
+        let d = tempdir();
+        let sub = d.path().join("sub");
+        let (mut s, _) = Store::open(sub.join("state.json"));
+        fs::write(&sub, b"x").unwrap();
+        s.save_now(&State::default(), at(100));
+        assert_eq!(s.saves(), 0);
+        assert_eq!(s.due(), Some(at(5_100)));
     }
 
     #[test]

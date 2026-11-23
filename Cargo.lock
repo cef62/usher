@@ -4052,12 +4052,14 @@ name = "usher"
 version = "0.1.0"
 dependencies = [
  "log",
+ "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
  "tempfile",
  "usher-core",
+ "usher-coreaudio",
 ]
 
 [[package]]
