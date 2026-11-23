@@ -133,6 +133,8 @@ mod tests {
         assert_eq!(w["label"], "panel");
         assert_eq!(w["visible"], false);
         assert_eq!(w["width"], 360);
+        assert_eq!(w["alwaysOnTop"], true);
+        assert_eq!(w["visibleOnAllWorkspaces"], true);
         assert_eq!(c["app"]["macOSPrivateApi"], true);
         assert_eq!(
             c["app"]["security"]["csp"],

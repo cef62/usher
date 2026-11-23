@@ -52,7 +52,7 @@ flowchart LR
   PANEL -- commands --> ENG
   TRAYW --> TRAY
   TRAYW --> PW
-  SL --> TRAYW
+  TRAYW --> SL
   PANEL --- PW
   SET -- commands --> SL
 ```
