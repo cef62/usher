@@ -7,6 +7,7 @@ use std::fmt;
 pub enum Skip {
     Disconnected,
     NotAlive,
+    Hidden,
     NoStreams,
     NeverUse,
 }
@@ -16,6 +17,7 @@ impl fmt::Display for Skip {
         f.write_str(match self {
             Skip::Disconnected => "disconnected",
             Skip::NotAlive => "not alive",
+            Skip::Hidden => "hidden",
             Skip::NoStreams => "no streams",
             Skip::NeverUse => "never use",
         })

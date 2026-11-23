@@ -19,12 +19,13 @@ pub enum Action {
 }
 
 /// In memory only.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Runtime {
     pub guard: LoopGuard,
     connected: Option<BTreeSet<DeviceKey>>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Outcome {
     pub actions: Vec<Action>,
     pub reasons: Vec<Reason>,

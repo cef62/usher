@@ -45,3 +45,10 @@ fn hidden_or_dead_is_not_listable() {
         .listable()
     );
 }
+
+#[test]
+fn unknown_transport_decodes_as_other() {
+    let json = r#"{"output":{"order":[]},"devices":{"x":{"name":"X","transport":"continuity","roles":[],"last_seen":null,"family":null}}}"#;
+    let st = usher_core::from_json(json).unwrap();
+    assert_eq!(st.devices[&key("x")].transport, Transport::Other);
+}

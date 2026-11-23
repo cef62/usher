@@ -108,3 +108,34 @@ fn reason_display_line() {
         "output: desired=b current=none skipped=[a: disconnected]"
     );
 }
+
+#[test]
+fn hidden_ranked_device_is_skipped_for_the_next() {
+    let s = st(&["h", "ok"], &[]);
+    let mut h = dev("h", 1, 0);
+    h.hidden = true;
+    let r = decide(
+        &s,
+        &snap(vec![h, dev("ok", 1, 0)], None, None),
+        Role::Output,
+    );
+    assert_eq!(r.desired, Some(key("ok")));
+    assert_eq!(r.skipped, vec![sk("h", Skip::Hidden)]);
+    assert_eq!(Skip::Hidden.to_string(), "hidden");
+    assert_eq!(serde_json::to_string(&Skip::Hidden).unwrap(), "\"hidden\"");
+}
+
+#[test]
+fn not_alive_beats_hidden_beats_no_streams() {
+    let s = st(&["x", "y"], &[]);
+    let mut x = dev("x", 0, 0);
+    x.hidden = true;
+    x.alive = false;
+    let mut y = dev("y", 0, 0);
+    y.hidden = true;
+    let r = decide(&s, &snap(vec![x, y], None, None), Role::Output);
+    assert_eq!(
+        r.skipped,
+        vec![sk("x", Skip::NotAlive), sk("y", Skip::Hidden)]
+    );
+}

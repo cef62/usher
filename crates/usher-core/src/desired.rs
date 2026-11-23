@@ -6,6 +6,8 @@ fn skip_cause(state: &State, snap: &Snapshot, role: Role, key: &DeviceKey) -> Op
     };
     if !dev.alive {
         Some(Skip::NotAlive)
+    } else if dev.hidden {
+        Some(Skip::Hidden)
     } else if dev.streams(role) == 0 {
         Some(Skip::NoStreams)
     } else if state.list(role).never_use.contains(key) {

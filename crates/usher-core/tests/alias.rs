@@ -94,7 +94,7 @@ fn serial_usb_keeps_its_own_identity() {
 }
 
 #[test]
-fn live_device_with_location_shaped_serial_keeps_its_settings() {
+fn unverified_record_cannot_donate_even_while_its_device_is_connected() {
     let mut s = State::default();
     step(&mut s, vec![usb(P1, false)]);
     assert!(step(&mut s, vec![usb(P1, false), usb(P2, true)]).is_empty());

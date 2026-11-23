@@ -211,6 +211,7 @@ fn alias_merge_is_reported() {
             Action::Persist
         ]
     );
+    assert_eq!(order(&s, Role::Output), [u2.as_str()]);
 }
 
 #[test]

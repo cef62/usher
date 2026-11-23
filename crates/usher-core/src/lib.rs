@@ -3,9 +3,10 @@
 //! M3 contract. The engine owns [`State`] (persisted) and [`Runtime`] (in memory).
 //! Per coalesced event it passes a [`Snapshot`] to [`reconcile`], executes the
 //! returned [`Outcome`]`.actions` (`SetDefault`, `PauseAuto`, `AliasMerged` log,
-//! `Persist`) and logs `Outcome.reasons`. UI commands go through [`apply`]
-//! followed by [`reconcile`]. [`panel_state`] renders the [`PanelState`] view
-//! model. [`seed`] builds the first-launch state; [`from_json`] and [`to_json`]
+//! `Persist`) and logs `Outcome.reasons`. UI commands go through [`apply`]:
+//! `Ok(true)` means the engine schedules a save; then it runs [`reconcile`].
+//! [`panel_state`] renders the [`PanelState`] view
+//! model. [`seed`] builds the first-launch state (the engine must save it immediately); [`from_json`] and [`to_json`]
 //! (de)serialise it.
 #![forbid(unsafe_code)]
 

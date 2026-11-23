@@ -11,11 +11,16 @@ pub struct LoopGuard {
 
 impl LoopGuard {
     /// Records a corrective write; returns true when the guard trips.
+    /// Keeps returning true after a trip until `reset`/`reset_role`.
     pub fn record(&mut self, role: Role, now: Timestamp) -> bool {
         let w = self.writes.get_mut(role);
         w.retain(|&t| now.since(t) < GUARD_WINDOW_MS);
         w.push(now);
         w.len() >= GUARD_WRITES
+    }
+
+    pub fn reset_role(&mut self, role: Role) {
+        self.writes.get_mut(role).clear();
     }
 
     pub fn reset(&mut self) {

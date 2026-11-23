@@ -89,6 +89,7 @@ pub enum Transport {
     AirPlay,
     Virtual,
     Aggregate,
+    #[serde(other)]
     Other,
 }
 

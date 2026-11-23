@@ -50,7 +50,8 @@ pub struct State {
     pub input: RoleList,
     pub devices: BTreeMap<DeviceKey, DeviceRecord>,
     pub ambiguous_families: BTreeSet<String>,
-    /// Unknown top-level keys; must stay the last field.
+    /// Unknown top-level keys, preserved at the top level only (nested structs drop unknown keys).
+    /// Must stay the last field.
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -105,11 +106,12 @@ impl fmt::Display for StateError {
 impl std::error::Error for StateError {}
 
 pub fn from_json(text: &str) -> Result<State, StateError> {
-    let state: State =
+    let mut state: State =
         serde_json::from_str(text).map_err(|e| StateError::Corrupt(e.to_string()))?;
     if state.schema_version > SCHEMA_VERSION {
         return Err(StateError::UnsupportedVersion(state.schema_version));
     }
+    state.schema_version = SCHEMA_VERSION;
     Ok(state)
 }
 

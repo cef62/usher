@@ -1,8 +1,8 @@
 mod common;
 use common::{T0, dev, key, order, snap};
 use usher_core::{
-    Command, CommandError, DeviceRecord, PausedReason, Role, Runtime, State, Transport, apply,
-    to_json,
+    Command, CommandError, DeviceRecord, PausedReason, Role, Runtime, State, Timestamp, Transport,
+    apply, decide, reconcile, to_json,
 };
 
 fn with_order(keys: &[&str]) -> State {
@@ -11,7 +11,7 @@ fn with_order(keys: &[&str]) -> State {
     s
 }
 
-fn run(s: &mut State, snap_devs: &[&str], cmd: Command) -> Result<(), CommandError> {
+fn run(s: &mut State, snap_devs: &[&str], cmd: Command) -> Result<bool, CommandError> {
     let devs = snap_devs.iter().map(|k| dev(k, 2, 2)).collect();
     apply(s, &mut Runtime::default(), &snap(devs, None, None), cmd)
 }
@@ -199,4 +199,73 @@ fn set_debug_persists_flag() {
     assert!(usher_core::from_json(&to_json(&s)).unwrap().debug);
     run(&mut s, &[], Command::SetDebug(false)).unwrap();
     assert!(!s.debug);
+}
+
+fn promote_cmd(k: &str) -> Command {
+    Command::Promote {
+        role: Role::Output,
+        key: key(k),
+    }
+}
+
+#[test]
+fn apply_reports_whether_state_changed() {
+    let mut s = State::default();
+    assert_eq!(run(&mut s, &[], Command::SetDebug(true)), Ok(true));
+    assert_eq!(run(&mut s, &[], Command::SetDebug(true)), Ok(false));
+    let mut s = with_order(&["a", "b"]);
+    assert_eq!(run(&mut s, &[], promote_cmd("a")), Ok(false));
+    assert_eq!(run(&mut s, &[], promote_cmd("b")), Ok(true));
+    let mut s = paused();
+    assert_eq!(run(&mut s, &[], Command::SetAutoSwitch(true)), Ok(true));
+}
+
+#[test]
+fn three_promotes_in_ten_seconds_do_not_trip() {
+    let mut s = with_order(&["a", "b", "c"]);
+    let mut rt = Runtime::default();
+    let devs = || vec![dev("a", 1, 0), dev("b", 1, 0), dev("c", 1, 0)];
+    let sn = snap(devs(), Some("c"), None);
+    for (i, k) in ["a", "b", "a", "b"].into_iter().enumerate() {
+        apply(&mut s, &mut rt, &sn, promote_cmd(k)).unwrap();
+        let o = reconcile(&mut s, &mut rt, &sn, Timestamp(T0.0 + i as u64 * 1_000));
+        assert!(
+            !o.actions
+                .iter()
+                .any(|a| matches!(a, usher_core::Action::PauseAuto { .. }))
+        );
+    }
+    assert!(s.auto_switch);
+}
+
+#[test]
+fn reorder_and_never_use_also_reset_the_guard() {
+    let mut s = with_order(&["a", "b"]);
+    let mut rt = Runtime::default();
+    rt.guard.record(Role::Output, T0);
+    rt.guard.record(Role::Output, T0);
+    let sn = snap(vec![], None, None);
+    apply(&mut s, &mut rt, &sn, reorder(&["b", "a"])).unwrap();
+    assert!(!rt.guard.record(Role::Output, T0));
+    rt.guard.record(Role::Output, T0);
+    let cmd = Command::SetNeverUse {
+        role: Role::Output,
+        key: key("a"),
+        on: true,
+    };
+    apply(&mut s, &mut rt, &sn, cmd).unwrap();
+    assert!(!rt.guard.record(Role::Output, T0));
+}
+
+#[test]
+fn promote_clears_never_use_for_that_role() {
+    let mut s = with_order(&["a", "b"]);
+    s.output.never_use.insert(key("b"));
+    assert_eq!(run(&mut s, &[], promote_cmd("b")), Ok(true));
+    assert!(s.output.never_use.is_empty());
+    let sn = snap(vec![dev("a", 1, 0), dev("b", 1, 0)], None, None);
+    assert_eq!(decide(&s, &sn, Role::Output).desired, Some(key("b")));
+    // promoting a never-use device already at the top still clears the flag
+    s.output.never_use.insert(key("b"));
+    assert_eq!(run(&mut s, &[], promote_cmd("b")), Ok(true));
 }

@@ -48,16 +48,35 @@ impl fmt::Display for CommandError {
 impl std::error::Error for CommandError {}
 
 /// Every arm validates before it mutates, so an `Err` leaves `state` untouched.
+/// `Ok(true)` means `state` changed: the engine schedules a save, then runs `reconcile`.
+/// `Ok(false)` is a no-op. Edits to a role's list reset that role's loop guard.
 pub fn apply(
+    state: &mut State,
+    rt: &mut Runtime,
+    snap: &Snapshot,
+    cmd: Command,
+) -> Result<bool, CommandError> {
+    let before = state.clone();
+    dispatch(state, rt, snap, cmd)?;
+    Ok(*state != before)
+}
+
+fn dispatch(
     state: &mut State,
     rt: &mut Runtime,
     snap: &Snapshot,
     cmd: Command,
 ) -> Result<(), CommandError> {
     match cmd {
-        Command::Reorder { role, order } => reorder(state, role, order),
-        Command::Promote { role, key } => promote(state, role, &key),
-        Command::SetNeverUse { role, key, on } => set_never_use(state, role, key, on),
+        Command::Reorder { role, order } => {
+            reorder(state, role, order).inspect(|()| rt.guard.reset_role(role))
+        }
+        Command::Promote { role, key } => {
+            promote(state, role, &key).inspect(|()| rt.guard.reset_role(role))
+        }
+        Command::SetNeverUse { role, key, on } => {
+            set_never_use(state, role, key, on).inspect(|()| rt.guard.reset_role(role))
+        }
         Command::Forget { key } => forget(state, snap, &key),
         Command::SetAutoSwitch(on) => {
             set_auto_switch(state, rt, on);
@@ -87,7 +106,9 @@ fn position(state: &State, role: Role, key: &DeviceKey) -> Result<usize, Command
 
 fn promote(state: &mut State, role: Role, key: &DeviceKey) -> Result<(), CommandError> {
     let pos = position(state, role, key)?;
-    state.list_mut(role).order[..=pos].rotate_right(1);
+    let list = state.list_mut(role);
+    list.order[..=pos].rotate_right(1);
+    list.never_use.remove(key); // clicking a row means "use this now"
     Ok(())
 }
 

@@ -61,3 +61,11 @@ fn paused_message_copy() {
         "usher paused auto-switch: AirPods kept taking input"
     );
 }
+
+#[test]
+fn schema_version_zero_is_normalised() {
+    assert_eq!(
+        from_json("{\"schema_version\":0}").unwrap().schema_version,
+        1
+    );
+}
