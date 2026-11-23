@@ -1,9 +1,13 @@
 //! Pure domain for usher; no I/O, no clock. Filled in M2.
 #![forbid(unsafe_code)]
 
+mod desired;
 mod model;
+mod reason;
 mod state;
+pub use desired::*;
 pub use model::*;
+pub use reason::*;
 pub use state::*;
 
 #[cfg(test)]
