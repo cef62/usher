@@ -85,11 +85,17 @@ pub fn reveal_log(app: AppHandle) -> Result<(), String> {
     let dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
     let args = reveal_args(&dir, dir.join("usher.log").exists());
     info!("show log in Finder");
-    std::process::Command::new("/usr/bin/open")
+    let mut child = std::process::Command::new("/usr/bin/open")
         .args(args)
         .spawn()
-        .map(drop)
-        .map_err(|e| format!("Could not open the log folder: {e}"))
+        .map_err(|e| format!("Could not open the log folder: {e}"))?;
+    // wait on a thread so the finished `open` is reaped, not left a zombie
+    std::thread::spawn(move || match child.wait() {
+        Ok(s) if !s.success() => warn!("open exited with {s}"),
+        Err(e) => warn!("could not wait on open ({e})"),
+        _ => {}
+    });
+    Ok(())
 }
 
 #[cfg(test)]

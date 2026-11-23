@@ -42,6 +42,15 @@ fn exe() -> String {
         .unwrap_or_default()
 }
 
+/// Turning it off from a development build would delete the installed app's item, which shares the name.
+fn change_refusal(exe: &str, debug_build: bool, enabled: bool) -> Option<&'static str> {
+    if enabled {
+        login_item_refusal(exe, debug_build)
+    } else {
+        login_item_refusal("", debug_build)
+    }
+}
+
 pub fn refusal() -> Option<&'static str> {
     login_item_refusal(&exe(), cfg!(debug_assertions))
 }
@@ -89,11 +98,11 @@ pub fn refresh(app: &AppHandle) {
     }
 }
 
-/// Flips the login item, then answers what the OS reports. Turning it off is never refused.
+/// Flips the login item, then answers what the OS reports. Turning it off is refused only in a development build.
 #[tauri::command(async)]
 pub fn set_login(app: AppHandle, enabled: bool) -> Result<bool, String> {
     let verb = if enabled { "turn on" } else { "turn off" };
-    if let Some(why) = refusal().filter(|_| enabled) {
+    if let Some(why) = change_refusal(&exe(), cfg!(debug_assertions), enabled) {
         return Err(why.into());
     }
     let launcher = app.autolaunch();
@@ -145,6 +154,16 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn turning_off_is_refused_only_in_a_development_build() {
+        let built = "/Volumes/Dev/usher/target/release/bundle/macos/usher.app/Contents/MacOS/usher";
+        let dev = Some("Open at login is not available in a development build.");
+        assert_eq!(change_refusal(built, true, false), dev);
+        assert_eq!(change_refusal(built, true, true), dev);
+        assert_eq!(change_refusal(built, false, false), None);
+        assert!(change_refusal(built, false, true).is_some());
     }
 
     #[test]

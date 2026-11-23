@@ -1,0 +1,68 @@
+:root {
+  color-scheme: light dark;
+  --text: #1d1d1f;
+  --text-dim: rgba(0, 0, 0, 0.62);
+  --bg: #ececec;
+  --group: #f6f6f6;
+  --line: rgba(0, 0, 0, 0.08);
+  --error: #c4291c;
+  --error-bg: rgba(196, 41, 28, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #f5f5f7;
+    --text-dim: rgba(255, 255, 255, 0.5);
+    --bg: #1e1e1e;
+    --group: #2a2a2a;
+    --line: rgba(255, 255, 255, 0.08);
+    --error: #ff6b5e;
+    --error-bg: rgba(255, 107, 94, 0.12);
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+main { padding: 4px 20px 20px; }
+h2 { font-size: 13px; font-weight: 600; margin: 18px 0 8px; }
+
+.group { background: var(--group); border: 1px solid var(--line); border-radius: 10px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+  margin: 0;
+  padding: 8px 12px;
+}
+.row + .row { border-top: 1px solid var(--line); }
+.row.end { justify-content: flex-end; }
+
+.note { color: var(--text-dim); font-size: 11px; }
+/* a note under the row it explains, not a row of its own */
+.row.note { display: block; min-height: 0; padding-top: 0; border-top: 0; }
+.footer { margin: 18px 0 0 2px; }
+
+input[type="checkbox"] { margin: 0; }
+
+.error {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--error);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--error-bg);
+  color: var(--text);
+  -webkit-user-select: text;
+  user-select: text;
+}
