@@ -62,3 +62,11 @@ The root `Cargo.toml` is a workspace with these members:
 - Never call plugin-log `attachConsole()` alongside `forwardConsole` (log loop).
 - Re-check the CSP once the first window loads (copied from hop, untested without a window).
 - Call `logging::apply(debug_setting)` when the Debug toggle changes.
+
+## Carry-overs from M2 (for the M3 and M4 plans)
+
+- `apply` returns `Ok(true)` when the state changed: the engine schedules a save, then runs `reconcile`.
+- The engine saves the seeded state immediately after `seed`.
+- After an AirPods-style guard trip, the input stays on the device that kept taking it (auto-switch is off).
+- M4 builds the paused text from `PanelState.paused` (`{role, key, name}`) with the copy `usher paused auto-switch: <name> kept taking <role>`.
+- Skip reasons now include `hidden` (a ranked device that macOS hides is not auto-selected).

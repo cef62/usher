@@ -7,3 +7,7 @@ description = "usher's pure domain: priority lists, reconcile, identity"
 
 [lints]
 workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
