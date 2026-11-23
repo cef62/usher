@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- LaunchServices starts usher as an agent app; lib.rs sets the same Accessory policy before tao finishes launching -->
+	<key>LSUIElement</key>
+	<true/>
+</dict>
+</plist>

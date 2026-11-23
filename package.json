@@ -1,0 +1,31 @@
+{
+  "name": "usher",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check:size": "node scripts/check-size.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version && node scripts/sync-version.mjs",
+    "tauri": "tauri",
+    "build:app": "tauri build --target aarch64-apple-darwin --bundles app"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "@tauri-apps/cli": "^2.12.4",
+    "@types/node": "^26.6.6",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-log": "^2.10.2"
+  }
+}

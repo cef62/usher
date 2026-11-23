@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Panel window (M4): forwards its console to the log file",
+  "windows": ["panel"],
+  "permissions": ["log:default"]
+}

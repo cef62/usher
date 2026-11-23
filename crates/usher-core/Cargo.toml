@@ -1,0 +1,9 @@
+[package]
+name = "usher-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "usher's pure domain: priority lists, reconcile, identity"
+
+[lints]
+workspace = true
