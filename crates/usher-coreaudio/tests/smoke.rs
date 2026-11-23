@@ -1,5 +1,6 @@
-// Re-enabled in Task 4, when `CoreAudioSystem` exists: delete the next line.
-#![cfg(any())]
+use std::sync::Arc;
+
+use usher_core::Role;
 use usher_coreaudio::{AudioSystem, CoreAudioSystem};
 
 #[test]
@@ -20,4 +21,40 @@ fn enumerates_real_devices() {
         .clone()
         .expect("a default output");
     assert!(scan.snapshot.is_connected(&out));
+}
+
+fn current_output(sys: &CoreAudioSystem) -> usher_core::DeviceKey {
+    sys.scan()
+        .unwrap()
+        .snapshot
+        .current
+        .output
+        .expect("a default output")
+}
+
+#[test]
+#[ignore = "needs real audio hardware"]
+fn set_default_to_current_output_is_ok() {
+    let sys = CoreAudioSystem::new();
+    let cur = current_output(&sys);
+    assert_eq!(sys.set_default(Role::Output, &cur), Ok(()));
+}
+
+#[test]
+#[ignore = "needs real audio hardware"]
+fn subscribe_then_unsubscribe_is_clean() {
+    let mut sys = CoreAudioSystem::new();
+    assert_eq!(sys.subscribe(Arc::new(|_| {})), Ok(()));
+    sys.unsubscribe();
+    sys.unsubscribe();
+}
+
+#[test]
+#[ignore = "needs real audio hardware"]
+fn set_default_after_rebind_is_ok() {
+    let mut sys = CoreAudioSystem::new();
+    sys.subscribe(Arc::new(|_| {})).unwrap();
+    sys.rebind().unwrap();
+    let cur = current_output(&sys);
+    assert_eq!(sys.set_default(Role::Output, &cur), Ok(()));
 }

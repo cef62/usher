@@ -4,15 +4,14 @@
 use std::fmt;
 use std::sync::Arc;
 
-// dead_code until CoreAudioSystem (Task 4) calls these.
-#[allow(dead_code)]
 mod listen;
-#[allow(dead_code)]
 mod props;
-#[allow(dead_code)]
 mod scan;
-#[allow(dead_code)]
+mod system;
 mod usb;
+mod write;
+
+pub use system::CoreAudioSystem;
 
 use usher_core::{DeviceKey, Role, Snapshot};
 

@@ -1,5 +1,5 @@
 //! System-object listeners. Every block is gated by a generation counter, so a callback
-//! already in flight when we unsubscribe becomes a no-op.
+//! that checks the gate after unsubscribe is a no-op.
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -18,12 +18,19 @@ use crate::{AudioError, AudioEvent, Notify, check};
 
 type Listener = RcBlock<dyn Fn(u32, NonNull<AudioObjectPropertyAddress>)>;
 
+/// block2 has no `Send + Sync` block type, so the bound lives here: CoreAudio calls the
+/// block on its own thread, and `f` must be safe to call there.
+fn listener(f: impl Fn() + Send + Sync + 'static) -> Listener {
+    RcBlock::new(move |_n: u32, _a: NonNull<AudioObjectPropertyAddress>| f())
+}
+
 #[derive(Clone, Default)]
 pub(crate) struct Gate {
     generation: Arc<AtomicU64>,
 }
 
 impl Gate {
+    #[cfg(test)]
     pub(crate) fn new() -> Self {
         Self::default()
     }
@@ -98,8 +105,7 @@ impl Listeners {
         self.notify = Some(notify.clone());
         for (selector, event) in EVENTS {
             let gated = self.gate.callback(notify.clone(), event);
-            let block: Listener =
-                RcBlock::new(move |_n: u32, _a: NonNull<AudioObjectPropertyAddress>| gated());
+            let block = listener(gated);
             let mut a = addr(selector);
             // SAFETY: `a` is a live stack address; CoreAudio copies the block and keeps it until
             // the matching Remove, and we keep our `RcBlock` so the same pointer can be removed.
@@ -112,9 +118,7 @@ impl Listeners {
                 )
             };
             if let Err(e) = check("AudioObjectAddPropertyListenerBlock", st) {
-                for (s, b) in self.added.drain(..).rev() {
-                    remove(s, &b);
-                }
+                self.unsubscribe();
                 return Err(e);
             }
             self.added.push((selector, block));
