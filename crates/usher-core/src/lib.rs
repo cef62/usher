@@ -2,10 +2,12 @@
 #![forbid(unsafe_code)]
 
 mod desired;
+mod guard;
 mod model;
 mod reason;
 mod state;
 pub use desired::*;
+pub use guard::*;
 pub use model::*;
 pub use reason::*;
 pub use state::*;
