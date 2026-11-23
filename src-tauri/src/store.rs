@@ -30,15 +30,14 @@ impl Store {
             due: None,
             saves: 0,
         };
-        let state = match fs::read_to_string(&s.path) {
-            Ok(text) => match from_json(&text) {
+        let state = match fs::read(&s.path) {
+            Ok(bytes) => match String::from_utf8(bytes)
+                .map_err(|e| StateError::Corrupt(e.to_string()))
+                .and_then(|text| from_json(&text))
+            {
                 Ok(st) => Some(st),
                 Err(StateError::Corrupt(e)) => {
-                    warn!("state.json is corrupt ({e}); moved aside to state.json.corrupt");
-                    if let Err(e) = fs::rename(&s.path, s.path.with_extension("json.corrupt")) {
-                        error!("could not move state.json aside ({e}); running without saving");
-                        s.writable = false;
-                    }
+                    s.move_aside(&e);
                     None
                 }
                 Err(StateError::UnsupportedVersion(v)) => {
@@ -60,6 +59,16 @@ impl Store {
             }
         };
         (s, state)
+    }
+
+    fn move_aside(&mut self, why: &str) {
+        match fs::rename(&self.path, self.path.with_extension("json.corrupt")) {
+            Ok(()) => warn!("state.json is corrupt ({why}); moved aside to state.json.corrupt"),
+            Err(e) => {
+                error!("could not move state.json aside ({e}); running without saving");
+                self.writable = false;
+            }
+        }
     }
 
     pub fn writable(&self) -> bool {
@@ -191,6 +200,21 @@ mod tests {
         assert_eq!(
             fs::read(d.path().join("state.json.corrupt")).unwrap(),
             b"{not json"
+        );
+        assert!(!d.path().join("state.json").exists());
+    }
+
+    #[test]
+    fn non_utf8_file_is_moved_aside() {
+        let d = tempdir();
+        let p = d.path().join("state.json");
+        fs::write(&p, [0xff, 0xfe, 0x00]).unwrap();
+        let (s, st) = Store::open(p);
+        assert!(st.is_none());
+        assert!(s.writable());
+        assert_eq!(
+            fs::read(d.path().join("state.json.corrupt")).unwrap(),
+            [0xff, 0xfe, 0x00]
         );
         assert!(!d.path().join("state.json").exists());
     }

@@ -52,6 +52,10 @@ pub fn run<A: AudioSystem, S: Shell>(mut engine: Engine<A, S>, rx: Receiver<Even
                 if engine.handle(ev, Instant::now()) == Flow::Stop {
                     return;
                 }
+                // a steady event backlog must not starve the deadline
+                if engine.next_due().is_some_and(|d| d <= Instant::now()) {
+                    engine.tick(Instant::now());
+                }
             }
             Err(RecvTimeoutError::Timeout) => engine.tick(Instant::now()),
             Err(RecvTimeoutError::Disconnected) => {

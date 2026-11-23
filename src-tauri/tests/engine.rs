@@ -156,6 +156,28 @@ fn guard_trip_pauses_and_tells_the_shell() {
     assert!(rec.calls().contains(&Call::Auto(false)));
     assert!(matches!(rec.last_paused(), Some(p) if p.name == "AirPods" && p.role == Role::Output));
     assert!(!e.state().auto_switch);
+    // the trip itself must be persisted by the reconcile, not only by a later toggle
+    e.tick(at(1_150));
+    let saved = read_state(d.path());
+    assert!(!saved.auto_switch);
+    assert!(saved.paused_reason.is_some());
+}
+
+#[test]
+fn toggling_auto_switch_on_reconciles_and_sets() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    let mut s = ranked(&["AirPods-uid", "BuiltInSpeakerDevice"]);
+    s.auto_switch = false;
+    state_file(d.path(), &s);
+    let (mut e, _) = boot(fake.clone(), d.path());
+    assert!(fake.world().sets.is_empty());
+    e.handle(Event::ToggleAutoSwitch, at(1_000));
+    e.tick(at(1_150));
+    assert_eq!(
+        fake.world().sets,
+        vec![(Role::Output, "AirPods-uid".into())]
+    );
 }
 
 #[test]
