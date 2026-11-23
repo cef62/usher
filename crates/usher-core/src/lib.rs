@@ -6,11 +6,14 @@ mod guard;
 pub mod identity;
 mod model;
 mod reason;
+mod remember;
 mod state;
 pub use desired::*;
 pub use guard::*;
 pub use model::*;
 pub use reason::*;
+#[doc(hidden)]
+pub use remember::remember;
 pub use state::*;
 
 #[cfg(test)]
