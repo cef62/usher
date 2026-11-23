@@ -123,10 +123,15 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     pub fn handle(&mut self, ev: Event, now: Instant) -> Flow {
         match ev {
             Event::Audio(a) => self.on_audio(a, now),
-            Event::Command(c) => self.on_command(c, now),
+            Event::Command(c) => {
+                self.on_command(c, now);
+                self.shell.auto_switch_changed(self.state.auto_switch);
+            }
             Event::ToggleAutoSwitch => {
                 let on = !self.state.auto_switch;
                 self.on_command(Command::SetAutoSwitch(on), now);
+                // the tray flipped its own check on click: say the truth on every path (dropped, no-op, rejected)
+                self.shell.auto_switch_changed(self.state.auto_switch);
             }
             Event::Quit(done) => {
                 self.shutdown();
@@ -239,7 +244,6 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 if was_on != self.state.auto_switch {
                     let on = self.state.auto_switch;
                     info!("auto-switch {}", if on { "on" } else { "off" });
-                    self.shell.auto_switch_changed(on);
                 }
                 self.emit();
                 self.schedule_reconcile(now);

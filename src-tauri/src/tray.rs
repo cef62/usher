@@ -1,3 +1,4 @@
+use log::warn;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, Manager};
 
@@ -33,7 +34,10 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         .menu(&menu)
         .on_menu_event(|app, ev| match ev.id().as_ref() {
             "auto" => {
-                app.state::<EngineHandle>().send(Event::ToggleAutoSwitch);
+                // muda flipped the check; with no engine the setting cannot change, so flip it back to "on"
+                if !app.state::<EngineHandle>().send(Event::ToggleAutoSwitch) {
+                    set_auto(app, true);
+                }
             }
             "quit" => {
                 log::info!("quit from tray");
@@ -46,21 +50,40 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Icon, check mark and tooltip follow the engine's value (muda already flipped the check on click).
+/// Icon, check mark and tooltip follow the engine's value (muda already flipped the check on click). Runs on the
+/// main thread without waiting: the tray setters block on it, and the main thread may be waiting on the engine
+/// in `RunEvent::Exit`.
 pub fn set_auto(app: &AppHandle, on: bool) {
-    if let Some(item) = app.try_state::<CheckMenuItem<tauri::Wry>>() {
-        let _ = item.set_checked(on);
+    let handle = app.clone();
+    let queued = app.run_on_main_thread(move || {
+        if let Some(item) = handle.try_state::<CheckMenuItem<tauri::Wry>>()
+            && let Err(e) = item.set_checked(on)
+        {
+            warn!("auto-switch check mark not set ({e})");
+        }
+        let Some(tray) = handle.tray_by_id("main") else {
+            return;
+        };
+        let bytes = if on { ICON_ON } else { ICON_OFF };
+        match tauri::image::Image::from_bytes(bytes) {
+            Ok(img) => {
+                if let Err(e) = tray.set_icon(Some(img)) {
+                    warn!("tray icon not set ({e})");
+                }
+                // set_icon resets the template flag
+                if let Err(e) = tray.set_icon_as_template(true) {
+                    warn!("tray template flag not set ({e})");
+                }
+            }
+            Err(e) => warn!("tray glyph did not decode ({e})"),
+        }
+        if let Err(e) = tray.set_tooltip(Some(tooltip(on))) {
+            warn!("tray tooltip not set ({e})");
+        }
+    });
+    if let Err(e) = queued {
+        warn!("tray update not queued ({e})");
     }
-    let Some(tray) = app.tray_by_id("main") else {
-        return;
-    };
-    let bytes = if on { ICON_ON } else { ICON_OFF };
-    if let Ok(img) = tauri::image::Image::from_bytes(bytes) {
-        let _ = tray.set_icon(Some(img));
-        // set_icon resets the template flag
-        let _ = tray.set_icon_as_template(true);
-    }
-    let _ = tray.set_tooltip(Some(tooltip(on)));
 }
 
 #[cfg(test)]

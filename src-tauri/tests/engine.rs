@@ -216,6 +216,22 @@ fn failed_scan_at_launch_leaves_state_unseeded_and_drops_commands() {
 }
 
 #[test]
+fn toggle_before_first_scan_reasserts_the_check_mark() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    fake.world().fail_scan = 1;
+    let (mut e, rec) = boot(fake, d.path());
+    e.handle(Event::ToggleAutoSwitch, at(10));
+    assert!(e.state().auto_switch);
+    let autos: Vec<_> = rec
+        .calls()
+        .into_iter()
+        .filter(|c| matches!(c, Call::Auto(_)))
+        .collect();
+    assert_eq!(autos, vec![Call::Auto(true), Call::Auto(true)]); // launch, then the toggle
+}
+
+#[test]
 fn quit_flushes_and_stops() {
     let d = tempfile::tempdir().unwrap();
     let (mut e, _) = boot(trio(), d.path());

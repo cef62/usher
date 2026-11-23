@@ -12,6 +12,9 @@ use std::time::Duration;
 use engine::EngineHandle;
 use tauri::Manager;
 
+/// Managed only when the engine thread was spawned.
+struct EngineStarted;
+
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     log::info!("usher {} starting", app.package_info().version);
     let dir = app.path().app_data_dir();
@@ -34,7 +37,10 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
     match dir {
-        Ok(dir) => shell::spawn(app.handle(), rx, handle.notify(), dir),
+        Ok(dir) => {
+            shell::spawn(app.handle(), rx, handle.notify(), dir);
+            app.manage(EngineStarted);
+        }
         // no state file location, no engine; the tray still works and Quit still exits
         Err(e) => log::error!("engine not started: no app data dir ({e})"),
     }
@@ -66,7 +72,10 @@ pub fn run() {
     app.run(|app, ev| {
         if let tauri::RunEvent::Exit = ev {
             // flush state.json; false when the engine never started or is gone
-            app.state::<EngineHandle>().quit(Duration::from_secs(1));
+            let acked = app.state::<EngineHandle>().quit(Duration::from_secs(1));
+            if !acked && app.try_state::<EngineStarted>().is_some() {
+                log::warn!("engine did not ack quit within 1 s; last changes may be unsaved");
+            }
         }
     });
 }
