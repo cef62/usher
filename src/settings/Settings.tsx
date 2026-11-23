@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { settingsApi } from "../api";
 import type { SettingsView } from "../types";
+import { Updates } from "./Updates";
 
 const APPROVAL = "If macOS lists usher as not allowed in System Settings › General › Login Items, allow it there.";
 
@@ -32,6 +33,12 @@ export function SettingsPage({ initial, api }: { initial: SettingsView; api: typ
         </label>
         {note && <p className="row note">{note}</p>}
       </div>
+      <Updates
+        view={view}
+        api={api}
+        run={run}
+        onCheck={(on) => void run(async () => (await api.setUpdateCheck(on), setView({ ...view, updateCheck: on })))}
+      />
       <h2>Troubleshooting</h2>
       <div className="group">
         <label className="row">

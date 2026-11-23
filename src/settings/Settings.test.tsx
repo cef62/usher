@@ -6,13 +6,17 @@ import { click, mount } from "../test/dom";
 import type { SettingsView } from "../types";
 import { SettingsPage } from "./Settings";
 
-const view = (p: Partial<SettingsView> = {}): SettingsView => ({ login: false, loginRefusal: null, debug: false, version: "0.1.0", ...p });
+const view = (p: Partial<SettingsView> = {}): SettingsView => ({ login: false, loginRefusal: null, debug: false, updateCheck: true, update: null, version: "0.1.0", ...p });
 let calls: unknown[][] = [];
+let checkResult: () => Promise<{ version: string } | null>;
 let loginResult: () => Promise<boolean>;
 const api: typeof settingsApi = {
   get: async () => view(),
   setLogin: (on) => (calls.push(["setLogin", on]), loginResult()),
   setDebug: async (on) => void calls.push(["setDebug", on]),
+  setUpdateCheck: async (on) => void calls.push(["setUpdateCheck", on]),
+  checkNow: () => checkResult(),
+  openWhatsNew: async () => void calls.push(["openWhatsNew"]),
   fit: async () => {},
   revealLog: async () => void calls.push(["revealLog"]),
 };
@@ -21,7 +25,7 @@ const checkbox = (r: Element, label: string) =>
 const button = (r: Element, text: string) => [...r.querySelectorAll("button")].find((b) => b.textContent === text)!;
 const alertText = (r: Element) => r.querySelector('[role="alert"]')?.textContent ?? null;
 
-beforeEach(() => { calls = []; loginResult = async () => true; });
+beforeEach(() => { calls = []; loginResult = async () => true; checkResult = async () => null; });
 afterEach(() => { document.body.innerHTML = ""; });
 
 test("Open at login shows the OS state and the refusal note", () => {
@@ -65,4 +69,39 @@ test("a failed reveal is announced", async () => {
   const { root } = mount(<SettingsPage initial={view()} api={{ ...api, revealLog: () => Promise.reject("Could not open the log folder: x") }} />);
   await act(async () => click(button(root, "Show log in Finder")));
   expect(alertText(root)).toBe("Could not open the log folder: x");
+});
+
+test("turns the daily check off through the engine", async () => {
+  const { root } = mount(<SettingsPage initial={view()} api={api} />);
+  expect(checkbox(root, "Check for updates daily").checked).toBe(true);
+  await act(async () => click(checkbox(root, "Check for updates daily")));
+  expect(calls).toEqual([["setUpdateCheck", false]]);
+  expect(checkbox(root, "Check for updates daily").checked).toBe(false);
+});
+
+const status = (r: Element) => r.querySelector('[role="status"]')!.textContent;
+
+test("Check now reports up to date, available or the error", async () => {
+  let done!: (v: { version: string } | null) => void;
+  checkResult = () => new Promise((res) => { done = res; });
+  const { root } = mount(<SettingsPage initial={view()} api={api} />);
+  await act(async () => click(button(root, "Check now")));
+  expect(button(root, "Checking…").disabled).toBe(true);
+  await act(async () => done(null));
+  expect(status(root)).toBe("usher 0.1.0 is up to date.");
+  checkResult = async () => ({ version: "0.2.0" });
+  await act(async () => click(button(root, "Check now")));
+  expect(status(root)).toBe("usher 0.2.0 is available.");
+  await act(async () => click(button(root, "What's new…")));
+  expect(calls).toEqual([["openWhatsNew"]]);
+  checkResult = () => Promise.reject("offline");
+  await act(async () => click(button(root, "Check now")));
+  expect(status(root)).toBe("Could not check for updates: offline");
+});
+
+test("a pending update shows in Settings and opens What's new", async () => {
+  const { root } = mount(<SettingsPage initial={view({ update: "0.2.0" })} api={api} />);
+  expect(status(root)).toBe("usher 0.2.0 is available.");
+  await act(async () => click(button(root, "What's new…")));
+  expect(calls).toEqual([["openWhatsNew"]]);
 });

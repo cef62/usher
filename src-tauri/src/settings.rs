@@ -10,7 +10,7 @@ use usher_core::Command;
 
 use crate::engine::EngineHandle;
 use crate::shell::LastView;
-use crate::{commands, login, panel};
+use crate::{commands, login, panel, update};
 
 pub const LABEL: &str = "settings";
 
@@ -20,6 +20,9 @@ pub struct SettingsView {
     pub login: bool,
     pub login_refusal: Option<String>,
     pub debug: bool,
+    pub update_check: bool,
+    /// The version waiting to install, if a check found one.
+    pub update: Option<String>,
     pub version: String,
 }
 
@@ -51,17 +54,16 @@ pub fn open(app: &AppHandle) {
 
 #[tauri::command]
 pub fn get_settings(app: AppHandle) -> SettingsView {
-    let debug = app
-        .state::<LastView>()
-        .0
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .as_ref()
-        .is_some_and(|v| v.panel.debug);
+    let last = app.state::<LastView>();
+    let last = last.0.lock().unwrap_or_else(|p| p.into_inner());
+    let debug = last.as_ref().is_some_and(|v| v.panel.debug);
+    let update_check = update::daily_check_on(last.as_ref());
     SettingsView {
         login: login::enabled(&app),
         login_refusal: login::refusal().map(Into::into),
         debug,
+        update_check,
+        update: update::pending(&app),
         version: app.package_info().version.to_string(),
     }
 }
@@ -69,6 +71,11 @@ pub fn get_settings(app: AppHandle) -> SettingsView {
 #[tauri::command]
 pub async fn set_debug(engine: State<'_, EngineHandle>, on: bool) -> Result<(), String> {
     commands::request(&engine, Command::SetDebug(on)).await
+}
+
+#[tauri::command]
+pub async fn set_update_check(engine: State<'_, EngineHandle>, on: bool) -> Result<(), String> {
+    commands::request(&engine, Command::SetUpdateCheck(on)).await
 }
 
 /// `open -R <log>` selects the file; a missing log opens the folder.

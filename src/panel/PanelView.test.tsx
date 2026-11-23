@@ -18,11 +18,12 @@ const v = (p: Partial<View> = {}): View => ({
     row("AirPods-uid", "AirPods", 3, { connected: false, canForget: true, lastSeen: now - 2 * 86_400_000 }),
   ],
   input: [row("mic-uid", "mic", 1, { active: true })],
-  errors: { output: null, input: null },
+  errors: { output: null, input: null }, update: null,
   ...p,
 });
 let sent: Command[] = [];
-const a: Actions = { send: async (c) => (sent.push(c), true), hide: () => {}, openSettings: () => {}, quit: () => {} };
+let opened = 0;
+const a: Actions = { send: async (c) => (sent.push(c), true), hide: () => {}, openSettings: () => {}, openWhatsNew: () => void (opened += 1), quit: () => {} };
 const ui = (view: View | null, error: string | null = null) => <PanelView view={view} error={error} now={now} actions={a} />;
 
 const rowButton = (r: Element, name: string) =>
@@ -31,7 +32,7 @@ const menuButton = (r: Element, name: string) => r.querySelector<HTMLElement>(`b
 const menuItem = (r: Element, text: string) => [...r.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((b) => b.textContent === text) ?? null;
 const button = (r: Element, text: string) => [...r.querySelectorAll("button")].find((b) => b.textContent === text)!;
 
-beforeEach(() => { sent = []; });
+beforeEach(() => { sent = []; opened = 0; });
 afterEach(() => { document.body.innerHTML = ""; });
 
 test("paused banner shows the M2 copy only while paused", () => {
@@ -141,4 +142,12 @@ test("mousedown on the menu and on the … button keeps focus so a click lands",
   expect(down(menuItem(root, "Move down")!).defaultPrevented).toBe(true);
   expect(down(btn).defaultPrevented).toBe(true);
   expect(root.querySelector('[role="menu"]')).not.toBeNull();
+});
+
+test("shows the pending update in the footer and opens What's new, never installs", () => {
+  const { root } = mount(ui(v({ update: "0.2.0" })));
+  act(() => click(button(root, "Update to usher 0.2.0…")));
+  expect(opened).toBe(1);
+  expect(sent).toEqual([]);
+  expect(mount(ui(v())).root.textContent).not.toContain("Update to usher");
 });

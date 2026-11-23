@@ -103,6 +103,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             login::set_login,
             settings::set_debug,
             settings::reveal_log,
+            settings::set_update_check,
             update::check_update,
             whatsnew::open_whatsnew,
             whatsnew::whatsnew_info,
