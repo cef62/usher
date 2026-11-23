@@ -64,6 +64,7 @@ pub(crate) fn get_ids(id: u32, selector: u32) -> Result<Vec<u32>, AudioError> {
     let mut a = addr(selector, objc2_core_audio::kAudioObjectPropertyScopeGlobal);
     let mut n = size(id, &mut a)?;
     let mut ids = vec![0u32; n as usize / size_of::<u32>()];
+    n = (ids.len() * size_of::<u32>()) as u32;
     // SAFETY: `a` is a stack address; `n` is the byte length of `ids`.
     let st = unsafe {
         AudioObjectGetPropertyData(

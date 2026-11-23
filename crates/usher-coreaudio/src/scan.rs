@@ -49,11 +49,29 @@ fn device(id: u32) -> Result<DeviceSnapshot, AudioError> {
     })
 }
 
-fn default_uid(selector: u32) -> Result<Option<DeviceKey>, AudioError> {
-    match get_u32(SYSTEM, selector, GLOBAL)? {
-        0 => Ok(None),
-        id => Ok(Some(uid_of(id)?)),
+/// Default device UID; a default that vanished mid-scan is `None`, not an error.
+fn default_key(
+    id: u32,
+    known: &[(u32, DeviceKey)],
+    lookup: impl Fn(u32) -> Result<DeviceKey, AudioError>,
+) -> Option<DeviceKey> {
+    if id == 0 {
+        return None;
     }
+    if let Some((_, key)) = known.iter().find(|(i, _)| *i == id) {
+        return Some(key.clone());
+    }
+    lookup(id)
+        .map_err(|e| log::debug!("default device vanished: {e}"))
+        .ok()
+}
+
+fn default_uid(selector: u32, known: &[(u32, DeviceKey)]) -> Result<Option<DeviceKey>, AudioError> {
+    Ok(default_key(
+        get_u32(SYSTEM, selector, GLOBAL)?,
+        known,
+        uid_of,
+    ))
 }
 
 /// Marks serial-less USB devices; true when any USB verdict is unresolved.
@@ -87,17 +105,21 @@ fn log_device(d: &DeviceSnapshot) {
 
 pub(crate) fn scan() -> Result<Scan, AudioError> {
     let mut devices = Vec::new();
+    let mut known = Vec::new();
     for id in get_ids(SYSTEM, kAudioHardwarePropertyDevices)? {
         match device(id) {
-            Ok(d) => devices.push(d),
+            Ok(d) => {
+                known.push((id, d.uid.clone()));
+                devices.push(d);
+            }
             Err(e) => log::debug!("skipping vanished device: {e}"),
         }
     }
     let usb_unresolved = resolve_usb(&mut devices);
     devices.iter().for_each(log_device);
     let current = PerRole {
-        output: default_uid(kAudioHardwarePropertyDefaultOutputDevice)?,
-        input: default_uid(kAudioHardwarePropertyDefaultInputDevice)?,
+        output: default_uid(kAudioHardwarePropertyDefaultOutputDevice, &known)?,
+        input: default_uid(kAudioHardwarePropertyDefaultInputDevice, &known)?,
     };
     Ok(Scan {
         snapshot: Snapshot { devices, current },
@@ -132,5 +154,31 @@ mod tests {
         for (fourcc, want) in table {
             assert_eq!(transport_from(fourcc), want, "{fourcc:#x}");
         }
+    }
+
+    fn key(s: &str) -> DeviceKey {
+        DeviceKey::from(s)
+    }
+    fn gone(_: u32) -> Result<DeviceKey, AudioError> {
+        Err(AudioError::Status {
+            call: "x",
+            status: -1,
+        })
+    }
+
+    #[test]
+    fn default_in_scanned_devices_needs_no_lookup() {
+        let known = [(7, key("A"))];
+        let panics = |_| -> Result<DeviceKey, AudioError> { panic!("looked up") };
+        assert_eq!(default_key(7, &known, panics), Some(key("A")));
+        assert_eq!(default_key(0, &known, panics), None);
+    }
+    #[test]
+    fn unknown_default_that_vanished_is_none() {
+        assert_eq!(default_key(9, &[(7, key("A"))], gone), None);
+    }
+    #[test]
+    fn unknown_default_is_looked_up() {
+        assert_eq!(default_key(9, &[], |_| Ok(key("B"))), Some(key("B")));
     }
 }

@@ -9,7 +9,7 @@ use objc2_io_kit::{
 pub(crate) struct UsbNode {
     pub location: u32,
     pub serial: Option<String>,
-    pub serial_index: u8,
+    pub serial_index: Option<u8>,
 }
 
 /// `Some(true)`: UID embeds the port. `Some(false)`: stable. `None`: not resolvable (yet).
@@ -26,7 +26,7 @@ pub(crate) fn serialless(uid: &str, nodes: &[UsbNode]) -> Option<bool> {
     if node.serial.as_deref().is_some_and(|s| !s.is_empty()) {
         return Some(false);
     }
-    Some(node.serial_index == 0)
+    Some(node.serial_index? == 0)
 }
 
 fn prop(entry: u32, key: &str) -> Option<CFRetained<CFType>> {
@@ -45,7 +45,7 @@ fn node(entry: u32) -> Option<UsbNode> {
     Some(UsbNode {
         location: u32::try_from(num(entry, "locationID")?).ok()?,
         serial,
-        serial_index: num(entry, "iSerialNumber").map_or(0, |n| n as u8),
+        serial_index: num(entry, "iSerialNumber").map(|n| n as u8),
     })
 }
 
@@ -86,7 +86,7 @@ mod tests {
         UsbNode {
             location,
             serial: serial.map(String::from),
-            serial_index: idx,
+            serial_index: Some(idx),
         }
     }
 
@@ -120,6 +120,14 @@ mod tests {
     #[test]
     fn node_without_serial_but_nonzero_index_is_not() {
         assert_eq!(serialless(U, &[node(0x14200000, None, 2)]), Some(false));
+    }
+    #[test]
+    fn node_without_index_data_is_unresolved() {
+        let n = UsbNode {
+            serial_index: None,
+            ..node(0x14200000, None, 0)
+        };
+        assert_eq!(serialless(U, &[n]), None);
     }
     #[test]
     fn non_hex_location_is_unresolved() {
