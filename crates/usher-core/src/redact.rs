@@ -69,11 +69,16 @@ pub fn strip_owner(name: &str, owner_names: &[String]) -> String {
     if words.len() > 1 && (words[0].ends_with("'s") || words[0].ends_with("’s")) {
         words.remove(0);
     }
+    let owners: Vec<String> = owner_names
+        .iter()
+        .filter(|o| o.chars().count() >= 3)
+        .map(|o| o.to_lowercase())
+        .collect();
     let mut out: Vec<&str> = Vec::new();
     for w in words {
-        let is_owner = owner_names
-            .iter()
-            .any(|o| o.chars().count() >= 3 && o.eq_ignore_ascii_case(w));
+        let is_owner = w
+            .split(|c: char| !c.is_alphanumeric())
+            .any(|part| owners.contains(&part.to_lowercase()));
         if !is_owner {
             out.push(w);
         } else if out
@@ -83,10 +88,15 @@ pub fn strip_owner(name: &str, owner_names: &[String]) -> String {
             out.pop();
         }
     }
-    out.join(" ")
+    if out.is_empty() {
+        "unknown device".into()
+    } else {
+        out.join(" ")
+    }
 }
 
 pub fn tilde(path: &str, home: &str) -> String {
+    let home = home.trim_end_matches('/');
     match path.strip_prefix(home) {
         Some(rest) if !home.is_empty() && (rest.is_empty() || rest.starts_with('/')) => {
             format!("~{rest}")

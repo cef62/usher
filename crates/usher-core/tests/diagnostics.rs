@@ -191,3 +191,57 @@ fn rebinding_shows_the_attempt() {
     d.engine.rebinding = Some(3);
     assert!(render_diagnostics(&d, "/h").contains("rebinding: attempt 3"));
 }
+
+#[test]
+fn owner_names_are_stripped_in_every_position() {
+    let o: Vec<String> = ["Ada", "Lovelace", "Zoë"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    for (input, want) in [
+        ("AirPods Pro (Ada)", "AirPods Pro"),
+        ("Ada, AirPods", "AirPods"),
+        ("AirPods di ADA.", "AirPods"),
+        ("AirPods Pro Ada's", "AirPods Pro"),
+        ("AirPods-Ada", "unknown device"),
+        ("Ada's", "unknown device"),
+        ("ZOË AirPods", "AirPods"),
+        ("AirPods Ada's Lovelace", "AirPods"),
+    ] {
+        assert_eq!(strip_owner(input, &o), want, "{input}");
+    }
+    assert_eq!(tilde("/Users/ada/Library/x", "/Users/ada/"), "~/Library/x");
+}
+
+#[test]
+fn one_key_renders_the_same_in_ranked_and_devices_lines() {
+    let k = "AppleUSBAudioEngine:Generic:USB Audio:14200000:1";
+    let mut state = State::default();
+    state.output.order = vec![key(k)];
+    state.devices.insert(
+        key(k),
+        DeviceRecord {
+            name: "USB Audio".into(),
+            transport: Transport::Usb,
+            roles: Default::default(),
+            last_seen: None,
+            family: Some("AppleUSBAudioEngine:Generic:USB Audio".into()),
+        },
+    );
+    let snap = snap(vec![named(k, "USB Audio", Transport::Usb)], Some(k), None);
+    let d = diagnose(
+        &state,
+        &snap,
+        EngineStatus {
+            scanned: true,
+            ..Default::default()
+        },
+    );
+    let text = render_diagnostics(&d, "/h");
+    assert_eq!(
+        text.matches(k).count(),
+        4,
+        "desired, ranked, device: {text}"
+    );
+    assert!(!text.contains("<serial>"), "{text}");
+}

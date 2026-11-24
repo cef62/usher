@@ -193,7 +193,7 @@ fn device_line(d: &Diagnostics, x: &DeviceReport, red: &mut Redactor) -> String 
     format!(
         "  {} · {} · {} · {} · {} · serial-less USB: {} · alias: {alias}\n",
         strip_owner(&x.name, &d.app.owner_names),
-        red.uid(x.key.as_str(), x.serialless_usb),
+        red.uid(x.key.as_str(), x.serialless_usb || x.family.is_some()),
         transport_name(x.transport),
         if x.alive { "alive" } else { "not alive" },
         if x.hidden { "hidden" } else { "visible" },
