@@ -14,7 +14,7 @@ pub const LABEL: &str = "whatsnew";
 
 /// The bundled page or, in `tauri dev`, the dev server. Anything else (a dropped URL) must not load in this window.
 /// Scheme, host and port must match exactly, with no userinfo.
-fn own_page(u: &Url, dev: Option<&Url>) -> bool {
+pub(crate) fn own_page(u: &Url, dev: Option<&Url>) -> bool {
     let plain = u.username().is_empty() && u.password().is_none();
     let bundled = u.scheme() == "tauri" && u.host_str() == Some("localhost") && u.port().is_none();
     plain && (bundled || dev.is_some_and(|d| d.origin() == u.origin()))

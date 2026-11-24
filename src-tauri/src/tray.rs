@@ -40,6 +40,7 @@ fn build_menu(
         app,
         &[
             &auto,
+            &MenuItem::with_id(app, "activity", "Activity…", true, None::<&str>)?,
             &MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?,
             &updates,
             &PredefinedMenuItem::separator(app)?,
@@ -87,6 +88,7 @@ fn on_menu(app: &AppHandle, id: &str) {
                 set_auto(app, app.state::<LastAuto>().0.load(Ordering::Relaxed));
             }
         }
+        "activity" => crate::activity::open(app),
         "settings" => crate::settings::open(app),
         "updates" => crate::update::install::tray_clicked(app),
         "quit" => {

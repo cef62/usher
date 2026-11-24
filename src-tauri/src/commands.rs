@@ -6,7 +6,7 @@ use tauri::{AppHandle, Runtime, State};
 use usher_core::Command;
 
 use crate::engine::{EngineHandle, PanelView, REQUEST_TIMEOUT};
-use crate::{panel, settings, shell::LastView, whatsnew};
+use crate::{activity, panel, settings, shell::LastView, whatsnew};
 
 pub const PANEL_COMMANDS: &[&str] = &[
     "get_view",
@@ -14,6 +14,7 @@ pub const PANEL_COMMANDS: &[&str] = &[
     "hide_panel",
     "open_settings",
     "open_whatsnew",
+    "open_activity",
     "quit",
 ];
 pub const SETTINGS_COMMANDS: &[&str] = &[
@@ -25,8 +26,10 @@ pub const SETTINGS_COMMANDS: &[&str] = &[
     "set_notify",
     "check_update",
     "open_whatsnew",
+    "open_activity",
 ];
 pub const WHATSNEW_COMMANDS: &[&str] = &["whatsnew_info", "whatsnew_install", "whatsnew_close"];
+pub const ACTIVITY_COMMANDS: &[&str] = &["get_activity", "get_diagnostics"];
 
 /// Custom commands are open to every window (no app ACL manifest in build.rs, so capabilities do not restrict them):
 /// this is the boundary. A command missing from both lists is denied everywhere.
@@ -35,6 +38,7 @@ pub fn allowed(label: &str, command: &str) -> bool {
         panel::LABEL => PANEL_COMMANDS.contains(&command),
         settings::LABEL => SETTINGS_COMMANDS.contains(&command),
         whatsnew::LABEL => WHATSNEW_COMMANDS.contains(&command),
+        activity::LABEL => ACTIVITY_COMMANDS.contains(&command),
         _ => false,
     }
 }
@@ -93,20 +97,24 @@ mod tests {
             ("panel", PANEL_COMMANDS),
             ("settings", SETTINGS_COMMANDS),
             ("whatsnew", WHATSNEW_COMMANDS),
+            ("activity", ACTIVITY_COMMANDS),
         ];
         for (label, list) in lists {
             for c in list {
                 assert!(allowed(label, c));
                 for (other, _) in lists {
                     if other != label {
-                        // open_whatsnew is shared by the panel and Settings
-                        let shared = *c == "open_whatsnew" && other != "whatsnew";
+                        // the open_* commands are shared by the panel and Settings
+                        let shared = (*c == "open_whatsnew" || *c == "open_activity")
+                            && (other == "panel" || other == "settings");
                         assert_eq!(allowed(other, c), shared, "{other} {c}");
                     }
                 }
             }
         }
         assert!(!allowed("whatsnew", "get_view") && !allowed("whatsnew", "open_whatsnew"));
+        assert!(!allowed("activity", "get_view") && !allowed("panel", "get_diagnostics"));
+        assert!(!allowed("activity", "open_activity") && !allowed("settings", "get_activity"));
         assert!(!allowed("panel", "whatsnew_install") && !allowed("", "quit"));
         assert!(!allowed("panel", "plugin:log|log"));
     }

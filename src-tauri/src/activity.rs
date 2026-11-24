@@ -5,7 +5,8 @@ use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State};
+use tauri::webview::NewWindowResponse;
+use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use usher_core::{AppInfo, Entry, render_diagnostics};
 
 use crate::engine::{EngineHandle, REQUEST_TIMEOUT};
@@ -43,7 +44,6 @@ impl Log {
         line
     }
 
-    #[allow(dead_code)] // read by `get_activity` (M6 Task 6)
     pub fn lines(&self) -> Vec<Line> {
         self.lines.iter().cloned().collect()
     }
@@ -119,6 +119,51 @@ pub async fn get_diagnostics(
     .map_err(|e| e.to_string())?
 }
 
+/// Opens the window, or brings it to the front. The panel hides first, without handing the focus back: this window
+/// takes it.
+pub fn open(app: &AppHandle) {
+    crate::panel::hide_for_window(app);
+    app.show().ok(); // undo the panel's app.hide(), or the window stays hidden
+    if let Some(w) = app.get_webview_window(LABEL) {
+        w.unminimize().ok();
+        w.show().ok();
+        w.set_focus().ok();
+        return;
+    }
+    let dev = cfg!(debug_assertions)
+        .then(|| app.config().build.dev_url.clone())
+        .flatten();
+    let built = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("activity.html".into()))
+        .title("usher activity")
+        .transparent(true) // the page draws over Liquid Glass, like the panel
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .inner_size(460.0, 560.0)
+        .min_inner_size(380.0, 320.0)
+        .center()
+        .on_navigation(move |u| crate::whatsnew::own_page(u, dev.as_ref()))
+        .on_new_window(|_, _| NewWindowResponse::Deny)
+        .build();
+    match built {
+        Ok(w) => {
+            crate::glass::apply(&w, crate::glass::WINDOW_RADIUS);
+            w.set_focus().ok();
+        }
+        Err(e) => log::warn!("could not open Activity ({e})"),
+    }
+}
+
+/// The panel's menu and Settings.
+#[tauri::command]
+pub fn open_activity(app: AppHandle) {
+    open(&app);
+}
+
+/// The history so far, newest first; later lines arrive as `activity` events.
+#[tauri::command]
+pub fn get_activity(log: State<ActivityLog>) -> Vec<Line> {
+    log.0.lock().unwrap_or_else(|p| p.into_inner()).lines()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,6 +192,23 @@ mod tests {
         };
         let line = Log::default().push(5, &e);
         assert_eq!(line.why.as_deref(), Some("AirPods connected"));
+    }
+
+    #[test]
+    fn capability_grants_log_listen_and_drag() {
+        let cap: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/activity.json")).unwrap();
+        assert_eq!(cap["windows"], serde_json::json!([LABEL]));
+        assert_eq!(
+            cap["permissions"],
+            serde_json::json!([
+                "log:default",
+                "core:event:allow-listen",
+                "core:event:allow-unlisten",
+                "core:window:allow-start-dragging",
+                "core:window:allow-internal-toggle-maximize"
+            ])
+        );
     }
 
     #[test]
