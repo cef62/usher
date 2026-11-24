@@ -6,6 +6,8 @@
     <title>What's new in usher</title>
   </head>
   <body>
+    <!-- the title bar overlays the page (TitleBarStyle::Overlay): this strip keeps the window draggable -->
+    <div class="titlebar" data-tauri-drag-region></div>
     <div id="root"></div>
     <script type="module" src="/src/whatsnew/main.tsx"></script>
   </body>

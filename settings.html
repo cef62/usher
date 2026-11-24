@@ -6,6 +6,8 @@
     <title>usher Settings</title>
   </head>
   <body>
+    <!-- the title bar overlays the page (TitleBarStyle::Overlay): this strip keeps the window draggable -->
+    <div class="titlebar" data-tauri-drag-region></div>
     <div id="root"></div>
     <script type="module" src="/src/settings/main.tsx"></script>
   </body>

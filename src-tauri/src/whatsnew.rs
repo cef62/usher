@@ -37,6 +37,8 @@ pub fn open(app: &AppHandle) {
         .flatten();
     let built = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("whatsnew.html".into()))
         .title("What's new in usher")
+        .transparent(true) // the page draws over Liquid Glass, like the panel
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
         .inner_size(520.0, 560.0)
         .min_inner_size(420.0, 360.0)
         .minimizable(false)
@@ -47,6 +49,7 @@ pub fn open(app: &AppHandle) {
         .build();
     match built {
         Ok(w) => {
+            crate::panel::glass(&w, crate::panel::WINDOW_RADIUS);
             w.set_focus().ok();
         }
         Err(e) => log::warn!("could not open What's new ({e})"),
@@ -123,10 +126,13 @@ mod tests {
     }
 
     #[test]
-    fn capability_grants_only_the_log() {
+    fn capability_grants_only_the_log_and_drag() {
         let cap: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/whatsnew.json")).unwrap();
         assert_eq!(cap["windows"], serde_json::json!([LABEL]));
-        assert_eq!(cap["permissions"], serde_json::json!(["log:default"]));
+        assert_eq!(
+            cap["permissions"],
+            serde_json::json!(["log:default", "core:window:allow-start-dragging"])
+        );
     }
 }

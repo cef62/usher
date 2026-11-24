@@ -85,3 +85,8 @@ test("a stale refusal reloads the window", async () => {
   expect(mocks.invoke).toHaveBeenCalledWith("whatsnew_install", { version: "0.2.0" });
   m.unmount();
 });
+
+test("nothing takes the focus on open", () => {
+  mount(<WhatsNew info={info} phase={{ kind: "idle" }} onInstall={() => {}} onClose={() => {}} />);
+  expect(document.activeElement).toBe(document.body);
+});
