@@ -31,3 +31,9 @@ Run these on a real Mac with the checks below. Start usher with `USHER_LOG=debug
 | 24 | **Row menu dismiss.** Click `…` on a row, then click elsewhere in the panel. | The menu closes. The panel stays open. |
 | 25 | **Dev-build login item.** Run a `pnpm tauri dev` build and try Settings › Open at login. | The change is refused with a message. The installed app's login item is not touched. |
 | 26 | **CSP.** Release build: open the panel and Settings. | The panel and Settings show no Content-Security-Policy violation (Safari Web Inspector → Console, or usher.log forwarded console). |
+| 27 | **Check now.** Release build: Settings › Check now, with the network on, then with it off. | On: `usher <version> is up to date.` (or the pending version). Off: `Could not check for updates: <e>` (the error text in place of `<e>`), and no crash. The log has an `update check` line either way. |
+| 28 | **Daily check off.** Settings: Check for updates daily off, quit, relaunch. Read `state.json` only through the app. | The box is still off after the relaunch. No `update check` line appears 30 s after launch. |
+| 29 | **Install from What's new.** After 0.1.1 ships, run 0.1.0 and open What's new from the panel footer. Click Install and restart. | usher relaunches as 0.1.1. The panel order is kept. The menu bar shows exactly one usher. |
+| 30 | **Pending update surfaces.** With an update pending, open the panel, the right-click menu and Settings. | The panel footer shows `Update to usher <version>…`. The tray menu has the update item. Settings shows the pending version. Each opens What's new. |
+| 31 | **What's new Escape.** Open What's new with the panel or Settings also open. Press Escape. | Only the What's new window closes. |
+| 32 | **Gatekeeper.** Download the release dmg in a browser, install it, open usher. | macOS blocks the first launch. **Open Anyway** or `xattr -cr /Applications/usher.app` lets it start. Later launches and updates need neither. |

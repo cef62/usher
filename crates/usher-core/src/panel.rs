@@ -19,6 +19,7 @@ pub struct PanelRow {
 pub struct PanelState {
     pub auto_switch: bool,
     pub debug: bool,
+    pub update_check: bool,
     pub paused: Option<PausedReason>,
     pub output: Vec<PanelRow>,
     pub input: Vec<PanelRow>,
@@ -28,6 +29,7 @@ pub fn panel_state(state: &State, snap: &Snapshot) -> PanelState {
     PanelState {
         auto_switch: state.auto_switch,
         debug: state.debug,
+        update_check: state.update_check,
         paused: state.paused_reason.clone(),
         output: rows(state, snap, Role::Output),
         input: rows(state, snap, Role::Input),

@@ -14,7 +14,8 @@
     "changeset": "changeset",
     "version-packages": "changeset version && node scripts/sync-version.mjs",
     "tauri": "tauri",
-    "build:app": "tauri build --target aarch64-apple-darwin --bundles app"
+    "release:tag": "changeset git-tag",
+    "build:app": "tauri build --target aarch64-apple-darwin --bundles app --config '{\"bundle\":{\"createUpdaterArtifacts\":false}}'"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

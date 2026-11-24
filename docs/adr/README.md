@@ -37,3 +37,4 @@ What gets easier, what gets harder, what we must now do.
 | [0005](0005-cargo-workspace-and-size-limits.md) | Cargo workspace layout and size limits | Accepted |
 | [0006](0006-engine-threading-and-coreaudio-binding.md) | Engine threading and the CoreAudio binding | Accepted |
 | [0007](0007-panel-window-and-login-item.md) | Panel window, login item and command replies | Accepted |
+| [0008](0008-updater-settings-and-release-guard.md) | Updater setting, release guard and install restart | Accepted |

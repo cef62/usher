@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "whatsnew",
+  "description": "What's new window: forwards its console to the log. Install progress arrives over a Channel; its custom commands are guarded in commands.rs.",
+  "windows": ["whatsnew"],
+  "permissions": ["log:default"]
+}

@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
-  # M5's release workflow will dispatch this job on the version PR.
+  # release.yml dispatches this job on the version PR.
   workflow_dispatch:
 
 concurrency:

@@ -59,6 +59,7 @@ export function Panel() {
     send: send(setError),
     hide: () => void panelApi.hide(),
     openSettings: () => void panelApi.openSettings(),
+    openWhatsNew: () => void panelApi.openWhatsNew(),
     quit: () => void panelApi.quit(),
   };
   return <PanelView view={view} error={error} now={now} actions={actions} />;

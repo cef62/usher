@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  version-or-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10 (6.1.0: pnpm steps silently no-op on Windows)
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # With pending changesets: opens/updates the "Version Packages" PR.
+      # Without: runs `changeset git-tag` and pushes the new vX.Y.Z tag.
+      # GitHub Releases are created by build-release.yml, not here.
+      - uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        id: changesets
+        with:
+          version-script: pnpm version-packages
+          publish-script: pnpm release:tag
+          create-github-releases: false
+          commit-message: "chore: version packages"
+          pr-title: "chore: version packages"
+
+      # The bot-opened version PR gets no pull_request CI (runs fail at startup with 0 jobs, #25).
+      - if: steps.changesets.outputs.pr-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref changeset-release/main
+
+      # A tag pushed with GITHUB_TOKEN never triggers `on: push: tags`, so start the
+      # build explicitly for the tag that was just created.
+      - if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build-release.yml -f tag="v$(node -p "require('./package.json').version")"

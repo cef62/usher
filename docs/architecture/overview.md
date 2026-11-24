@@ -30,7 +30,7 @@ flowchart LR
     TRAYW[Tray]
     PW[Panel window]
     SL[Settings + Login]
-    UPD[Updater + WhatsNew, M5]
+    UPD[Updater + WhatsNew]
   end
 
   subgraph ui["src/ (React)"]

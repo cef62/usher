@@ -14,6 +14,7 @@ export const panelApi = {
   run: (cmd: Command) => invoke<void>("run_command", { cmd }),
   hide: () => invoke<void>("hide_panel"),
   openSettings: () => invoke<void>("open_settings"),
+  openWhatsNew: () => invoke<void>("open_whatsnew"),
   quit: () => invoke<void>("quit"),
   fit: (contentHeight: number) => getCurrentWindow().setSize(new LogicalSize(PANEL_WIDTH, contentHeight)),
 };
@@ -22,6 +23,9 @@ export const settingsApi = {
   get: () => invoke<SettingsView>("get_settings"),
   setLogin: (on: boolean) => invoke<boolean>("set_login", { enabled: on }),
   setDebug: (on: boolean) => invoke<void>("set_debug", { on }),
+  setUpdateCheck: (on: boolean) => invoke<void>("set_update_check", { on }),
+  checkNow: () => invoke<{ version: string } | null>("check_update"),
+  openWhatsNew: () => invoke<void>("open_whatsnew"),
   fit: (contentHeight: number) => getCurrentWindow().setSize(new LogicalSize(SETTINGS_WIDTH, contentHeight)),
   revealLog: () => invoke<void>("reveal_log"),
 };

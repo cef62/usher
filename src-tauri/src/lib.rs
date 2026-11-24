@@ -10,6 +10,8 @@ mod settings;
 mod shell;
 pub mod store;
 mod tray;
+pub mod update;
+mod whatsnew;
 
 use std::time::Duration;
 
@@ -20,24 +22,32 @@ use tauri::Manager;
 /// Managed only when the engine thread was spawned.
 struct EngineStarted;
 
-fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    log::info!("usher {} starting", app.package_info().version);
-    let dir = app.path().app_data_dir();
-    // a second copy (login item beside a running usher, or a dev build) leaves before it registers anything
-    match &dir {
+/// A second copy (login item beside a running usher, or a dev build) leaves before it registers anything. The relaunch
+/// after an update waits for the old process to release the lock, then consumes the restart mark.
+fn take_instance(dir: &Result<std::path::PathBuf, tauri::Error>) {
+    match dir {
         Ok(dir) => {
-            if !instance::hold_instance_lock(dir) {
+            let wait = instance::lock_wait(instance::restart_mark_fresh(dir));
+            if !instance::hold_instance_lock(dir, wait) {
                 log::warn!("another usher is running; this one exits");
                 std::process::exit(0);
             }
+            instance::take_restart_mark(dir);
             log::debug!("instance lock held in {}", dir.display());
         }
         Err(e) => log::warn!("no app data dir, instance lock skipped ({e})"),
     }
+}
+
+fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    log::info!("usher {} starting", app.package_info().version);
+    let dir = app.path().app_data_dir();
+    take_instance(&dir);
     let (handle, rx) = EngineHandle::new();
     app.manage(handle.clone());
     app.manage(shell::LastView(Mutex::new(None)));
     panel::setup(app.handle());
+    update::setup(app.handle());
     if let Err(e) = tray::build(app.handle()) {
         // an agent app without a tray has no UI and no way to quit
         log::error!("no menu-bar icon ({e})");
@@ -64,9 +74,8 @@ fn log_panics() {
     }));
 }
 
-pub fn run() {
-    log_panics();
-    let mut app = tauri::Builder::default()
+fn builder() -> tauri::Builder<tauri::Wry> {
+    tauri::Builder::default()
         .plugin(logging::plugin())
         .plugin(tauri_plugin_notification::init())
         .plugin(
@@ -74,6 +83,8 @@ pub fn run() {
                 .app_name(login::AUTOSTART_NAME)
                 .build(),
         )
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(setup)
         .on_window_event(|w, ev| {
             if let tauri::WindowEvent::Focused(f) = ev
@@ -91,8 +102,19 @@ pub fn run() {
             settings::get_settings,
             login::set_login,
             settings::set_debug,
-            settings::reveal_log
+            settings::reveal_log,
+            settings::set_update_check,
+            update::check_update,
+            whatsnew::open_whatsnew,
+            whatsnew::whatsnew_info,
+            whatsnew::whatsnew_install,
+            whatsnew::whatsnew_close
         ]))
+}
+
+pub fn run() {
+    log_panics();
+    let mut app = builder()
         .build(tauri::generate_context!())
         .expect("error while running usher");
     // right after build, not in setup: tao logs TRACE from applicationDidFinishLaunching before setup runs, and the
@@ -122,7 +144,6 @@ mod tests {
         assert_eq!(c["productName"], "usher");
         assert_eq!(c["bundle"]["macOS"]["minimumSystemVersion"], "14.0");
         assert_eq!(c["bundle"]["macOS"]["signingIdentity"], "-");
-        assert!(c["plugins"]["updater"].is_null(), "updater is M5");
     }
 
     #[test]

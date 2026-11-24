@@ -21,18 +21,37 @@ pub fn tooltip(on: bool) -> &'static str {
     }
 }
 
-/// The menu-bar icon: left click opens the panel, right click shows Auto-switch, Settings… and Quit.
-pub fn build(app: &AppHandle) -> tauri::Result<()> {
+fn build_menu(
+    app: &AppHandle,
+) -> tauri::Result<(
+    Menu<tauri::Wry>,
+    CheckMenuItem<tauri::Wry>,
+    MenuItem<tauri::Wry>,
+)> {
     let auto = CheckMenuItem::with_id(app, "auto", "Auto-switch", true, true, None::<&str>)?;
+    let updates = MenuItem::with_id(
+        app,
+        "updates",
+        crate::update::install::tray_text(None),
+        true,
+        None::<&str>,
+    )?;
     let menu = Menu::with_items(
         app,
         &[
             &auto,
             &MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?,
+            &updates,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "quit", "Quit usher", true, None::<&str>)?,
         ],
     )?;
+    Ok((menu, auto, updates))
+}
+
+/// The menu-bar icon: left click opens the panel, right click shows Auto-switch, Settings…, Check for Updates… and Quit.
+pub fn build(app: &AppHandle) -> tauri::Result<()> {
+    let (menu, auto, updates) = build_menu(app)?;
     app.manage(LastAuto(AtomicBool::new(true)));
     tauri::tray::TrayIconBuilder::with_id("main")
         .tooltip(tooltip(true))
@@ -55,6 +74,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         .on_menu_event(|app, ev| on_menu(app, ev.id().as_ref()))
         .build(app)?;
     app.manage(auto);
+    app.manage(crate::update::install::TrayItem(updates));
     Ok(())
 }
 
@@ -68,6 +88,7 @@ fn on_menu(app: &AppHandle, id: &str) {
             }
         }
         "settings" => crate::settings::open(app),
+        "updates" => crate::update::install::tray_clicked(app),
         "quit" => {
             log::info!("quit from tray");
             app.exit(0);

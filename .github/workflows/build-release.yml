@@ -1,0 +1,122 @@
+name: Build release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (release.yml dispatches this with the tag it just pushed)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  # One job owns the GitHub Release so the platform builds never race to create it. It is created
+  # as a draft: GitHub makes published releases immutable, so assets can only be added before publishing.
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.release.outputs.id }}
+      notes: ${{ steps.release.outputs.notes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false # later steps use the env token (tauri-action, gh), never git auth
+
+      - id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          [[ "$TAG" == v* ]] || { echo "::error::tag must start with v"; exit 1; }
+          # Release notes = this version's CHANGELOG section (headings kept) + the install hints below a `---` line,
+          # which the app's What's new window cuts off. Tested in scripts/release-notes.test.ts.
+          node scripts/release-notes.mjs "${TAG#v}" CHANGELOG.md > notes.md
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft \
+            --title "usher $TAG" \
+            --notes-file notes.md
+          echo "id=$(gh release view "$TAG" --json databaseId -q .databaseId)" >> "$GITHUB_OUTPUT"
+          { echo 'notes<<EOF_NOTES'; cat notes.md; echo 'EOF_NOTES'; } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      # tauri-action merges each platform into the release's latest.json by download → edit →
+      # re-upload. Two jobs finishing together lose a platform, so build one at a time.
+      max-parallel: 1
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false # pnpm install and crate build scripts run here: no repo-write token on disk
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10 (6.1.0: pnpm steps silently no-op on Windows)
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch, 2026-09
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test
+
+      # src-tauri's tauri::generate_context! needs the built frontend (frontendDist)
+      - run: pnpm build
+
+      - run: cargo test --workspace
+
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v0.5.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.id }}
+          # With releaseId set the action creates nothing, but it still takes latest.json's `notes` from releaseBody.
+          releaseBody: ${{ needs.create-release.outputs.notes }}
+          uploadUpdaterJson: true
+          args: ${{ matrix.args }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          # Published releases are immutable: a feed missing the platform, for another version or signed by a
+          # key the app does not trust must never go out. Tested in scripts/check-feed.test.ts.
+          gh release download "$TAG" -p latest.json -O latest.json
+          node scripts/check-feed.mjs latest.json src-tauri/tauri.conf.json "${TAG#v}"
+          gh release edit "$TAG" --draft=false

@@ -2,7 +2,7 @@ import type { Command, View } from "../types";
 import { RoleList } from "./RoleList";
 import { READ_ONLY, pausedText } from "./text";
 
-export type Actions = { send(cmd: Command): Promise<boolean>; hide(): void; openSettings(): void; quit(): void };
+export type Actions = { send(cmd: Command): Promise<boolean>; hide(): void; openSettings(): void; openWhatsNew(): void; quit(): void };
 type Props = { view: View | null; error: string | null; now: number; actions: Actions };
 
 // React's types lack the `switch` attribute
@@ -13,6 +13,7 @@ export function PanelView({ view, error, now, actions }: Props) {
     <footer>
       {view?.debug && <span className="badge badge-debug">Debug</span>}
       <span className="spacer" />
+      {view?.update && <button type="button" onClick={actions.openWhatsNew}>Update to usher {view.update}…</button>}
       <button type="button" onClick={actions.openSettings}>Settings…</button>
       <button type="button" onClick={actions.quit}>Quit</button>
     </footer>
