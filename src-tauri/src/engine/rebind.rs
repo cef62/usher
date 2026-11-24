@@ -42,6 +42,8 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     /// seed or rebind reconcile deferred to the USB recheck) would otherwise wait for the next device event.
     pub(super) fn reconcile_or_retry(&mut self, now: Instant) {
         if !self.run_reconcile(now) {
+            // events are dropped until the retry: a device plugged in meanwhile still gets its USB recheck
+            self.usb_rechecked = false;
             let d = retry_delay(self.rebind_attempt);
             warn!("scan retry in {} s", d.as_secs());
             self.rebind_due = Some(now + d);

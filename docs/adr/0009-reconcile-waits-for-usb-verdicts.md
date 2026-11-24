@@ -31,7 +31,8 @@ recheck reconciles even if the verdict is still unresolved. A coalesced reconcil
 together with the recheck is the recheck, so the delay stays bounded at about 650 ms per device
 event even under event churn. A scan that fails in a recheck or coalesced reconcile retries through the
 bind backoff (1, 2, 4, 8, 16, then 60 s), because the deferred decision would otherwise wait for the
-next device event.
+next device event. The retry re-registers the listeners, drops events and refuses Forget until it
+succeeds, and it re-arms the USB recheck, so a device plugged in meanwhile still gets one.
 
 ## Consequences
 

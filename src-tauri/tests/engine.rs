@@ -338,7 +338,10 @@ fn a_failed_recheck_scan_at_launch_retries_and_seeds() {
     e.tick(at(500));
     assert_eq!(e.saves(), 0);
     assert_eq!(e.next_due(), Some(at(1_500)));
+    // the retry scan defers once more to its own recheck
     e.tick(at(1_500));
+    assert_eq!(e.saves(), 0);
+    e.tick(at(2_000));
     assert_eq!(e.saves(), 1);
 }
 
@@ -357,5 +360,6 @@ fn a_failed_recheck_scan_after_a_restart_retries_and_switches_back() {
     e.tick(at(1_500));
     assert!(fake.world().sets.is_empty());
     e.tick(at(2_500));
+    e.tick(at(3_000));
     assert_eq!(fake.world().sets.len(), 1);
 }
