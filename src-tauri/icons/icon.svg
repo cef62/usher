@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- usher app icon, "Lineup": ranked devices, the top one plays. PNGs and icon.icns are rendered from this file. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#3730A3"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="250" y="330" width="380" height="84" rx="42" fill="#fff"/>
+  <rect x="250" y="470" width="290" height="84" rx="42" fill="#fff" opacity=".55"/>
+  <rect x="250" y="610" width="200" height="84" rx="42" fill="#fff" opacity=".35"/>
+  <path d="M690 312a70 70 0 0 1 0 120M740 262a140 140 0 0 1 0 220" fill="none" stroke="#fff" stroke-width="36" stroke-linecap="round"/>
+</svg>
