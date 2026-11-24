@@ -87,6 +87,7 @@ test("a stale refusal reloads the window", async () => {
 });
 
 test("nothing takes the focus on open", () => {
-  mount(<WhatsNew info={info} phase={{ kind: "idle" }} onInstall={() => {}} onClose={() => {}} />);
+  const m = mount(<WhatsNew info={info} phase={{ kind: "idle" }} onInstall={() => {}} onClose={() => {}} />);
   expect(document.activeElement).toBe(document.body);
+  m.unmount();
 });

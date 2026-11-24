@@ -1,8 +1,8 @@
 //! The What's new window: what the stored update brings (its release notes), then "Install and restart". Opened on
 //! request only (the panel's update row, the menu-bar item, Settings); one at a time.
 //!
-//! Boundary. The window invokes only `commands::WHATSNEW_COMMANDS`. It holds one permission (capabilities/whatsnew.json,
-//! `log:default`): install progress reaches it over a `Channel` given to `whatsnew_info`, scoped to its webview.
+//! Boundary. The window invokes only `commands::WHATSNEW_COMMANDS`. Its permissions (capabilities/whatsnew.json) are
+//! `log:default` and dragging by its title strip: install progress reaches it over a `Channel` given to `whatsnew_info`, scoped to its webview.
 
 use tauri::ipc::Channel;
 use tauri::webview::NewWindowResponse;
