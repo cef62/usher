@@ -3,5 +3,5 @@
   "identifier": "whatsnew",
   "description": "What's new window: forwards its console to the log and drags by its title strip. Install progress arrives over a Channel; its custom commands are guarded in commands.rs.",
   "windows": ["whatsnew"],
-  "permissions": ["log:default", "core:window:allow-start-dragging"]
+  "permissions": ["log:default", "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize"]
 }

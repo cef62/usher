@@ -2,6 +2,7 @@
 
 mod commands;
 pub mod engine;
+mod glass;
 mod instance;
 mod logging;
 mod login;
@@ -158,7 +159,7 @@ mod tests {
         assert_eq!(w["visibleOnAllWorkspaces"], true);
         assert_eq!(w["acceptFirstMouse"], true);
         assert_eq!(w["transparent"], true);
-        // the material is applied in code (panel::glass): config windowEffects cannot do Liquid Glass
+        // the material is applied in code (glass::apply): config windowEffects cannot do Liquid Glass
         assert!(w["windowEffects"].is_null());
         assert_eq!(c["app"]["macOSPrivateApi"], true);
         assert_eq!(
@@ -191,7 +192,9 @@ mod tests {
                 "core:event:allow-listen",
                 "core:event:allow-unlisten",
                 "core:window:allow-set-size",
-                "core:window:allow-start-dragging"
+                "core:window:allow-start-dragging",
+                // a double-click on the title strip; a no-op, the window is not maximizable
+                "core:window:allow-internal-toggle-maximize"
             ])
         );
     }
