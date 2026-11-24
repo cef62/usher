@@ -1,5 +1,11 @@
 # usher
 
+## 0.1.1
+
+### Patch Changes
+
+- 5e3bbfa: Fixed Settings not showing a newly found update until it was closed and reopened.
+
 ## 0.1.0
 
 ### Minor Changes
