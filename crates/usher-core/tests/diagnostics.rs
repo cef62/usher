@@ -76,6 +76,14 @@ fn ascii_owner_names_glued_to_a_cjk_particle_are_dropped() {
     assert!(!strip_owner("Yamada的AirPods", &taro).contains("Yamada"));
     let ada = vec!["Ada".to_string()];
     assert_eq!(strip_owner("Adapter Speakers", &ada), "Adapter Speakers");
+    let wide = vec!["Taro".to_string(), "Yamada".to_string(), "taro".to_string()];
+    assert!(!strip_owner("ＴａｒｏのAirPods", &wide).contains("Ｔａｒｏ"));
+    assert_eq!(strip_owner("Ｔａｒｏ Yamada AirPods", &wide), "AirPods");
+    let vi = vec!["Mỹ".to_string()];
+    assert_eq!(
+        strip_owner("Loa Mỹthuật Speakers", &vi),
+        "Loa Mỹthuật Speakers"
+    );
     let le = vec!["Lé".to_string()];
     assert_eq!(strip_owner("élégant Speakers", &le), "élégant Speakers");
 }

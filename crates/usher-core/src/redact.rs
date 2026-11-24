@@ -62,6 +62,21 @@ impl Redactor {
 
 const CONNECTORS: [&str; 8] = ["di", "de", "da", "du", "del", "von", "van", "of"];
 
+/// Hangul, CJK, kana and CJK compatibility letters: names in these scripts are short.
+pub fn is_cjk(c: char) -> bool {
+    matches!(c as u32, 0x1100..=0x11FF | 0x2E80..=0x9FFF | 0xAC00..=0xD7AF | 0xF900..=0xFAFF)
+}
+
+/// Full-width Latin (`Ｔａｒｏ`) folded to ASCII.
+fn fold_wide(s: &str) -> String {
+    s.chars()
+        .map(|c| match c as u32 {
+            n @ 0xFF01..=0xFF5E => char::from_u32(n - 0xFEE0).unwrap_or(c),
+            _ => c,
+        })
+        .collect()
+}
+
 /// Owner words match a whole part; non-ASCII ones also inside it (`山田の…`, names glue to particles),
 /// ASCII ones also as a sub-part split at non-ASCII letters (`Taroの`, but never `Adapter` for `Ada`).
 fn hits(owners: &[String], part: &str) -> bool {
@@ -87,21 +102,14 @@ pub fn strip_owner(name: &str, owner_names: &[String]) -> String {
     let owners: Vec<String> = owner_names
         .iter()
         // CJK and Hangul names are short; Latin and Cyrillic ones keep the 3-letter floor.
-        .filter(|o| {
-            o.chars().count()
-                >= if o.chars().any(|c| c as u32 >= 0x1100) {
-                    2
-                } else {
-                    3
-                }
-        })
+        .filter(|o| o.chars().count() >= if o.chars().any(is_cjk) { 2 } else { 3 })
         .map(|o| o.to_lowercase())
         .collect();
     let mut out: Vec<&str> = Vec::new();
     for w in words {
         let is_owner = w
             .split(|c: char| !c.is_alphanumeric())
-            .any(|part| hits(&owners, &part.to_lowercase()));
+            .any(|part| hits(&owners, &fold_wide(part).to_lowercase()));
         if !is_owner {
             out.push(w);
         } else if out

@@ -269,21 +269,21 @@ fn a_connect_notifies_once_for_both_roles() {
 }
 
 #[test]
-fn launch_rebind_and_commands_never_notify() {
+fn rebind_and_commands_never_notify_after_the_quiet_period() {
     let d = tempfile::tempdir().unwrap();
     state_file(d.path(), &ranked(&[PODS, SPK]));
     let fake = world(vec![spk(), pods(), mic()], SPK);
     let (mut e, rec) = boot(fake.clone(), d.path());
-    dev_event(&mut e, AudioEvent::ServiceRestarted, 100);
+    dev_event(&mut e, AudioEvent::ServiceRestarted, 20_000);
     fake.world().current.output = Some(SPK.into());
-    e.tick(at(1_200));
+    e.tick(at(21_200));
     let order = vec![SPK.into(), PODS.into()];
     let cmd = Command::Reorder {
         role: Role::Output,
         order,
     };
-    assert_eq!(ask(&mut e, cmd, 2_000), Ok(()));
-    e.tick(at(2_300));
+    assert_eq!(ask(&mut e, cmd, 40_000), Ok(()));
+    e.tick(at(40_300));
     assert!(rec.entries().len() >= 3, "{:?}", rec.entries());
     assert_eq!(rec.notices(), Vec::<String>::new());
 
@@ -296,8 +296,8 @@ fn launch_rebind_and_commands_never_notify() {
         role: Role::Output,
         key: PODS.into(),
     };
-    assert_eq!(ask(&mut e, cmd, 100), Ok(()));
-    e.tick(at(300));
+    assert_eq!(ask(&mut e, cmd, 20_000), Ok(()));
+    e.tick(at(20_300));
     assert!(matches!(rec.entries().last(), Some(Entry::Failed { .. })));
     assert_eq!(rec.notices(), Vec::<String>::new());
 }
@@ -367,7 +367,8 @@ fn notices_off_still_records_history() {
     let fake = world(vec![spk(), pods(), mic()], SPK);
     let (mut e, rec) = boot(fake.clone(), d.path());
     assert_eq!(ask(&mut e, Command::SetNotify(false), 10), Ok(()));
-    correct(&mut e, &fake, 200);
+    e.tick(at(200));
+    correct(&mut e, &fake, 10_200);
     assert_eq!(rec.entries().len(), 1);
     assert!(rec.notices().is_empty());
     e.tick(at(3_000));
@@ -381,11 +382,13 @@ fn the_trip_notifies_only_through_paused() {
     let fake = world(vec![spk(), pods(), mic()], PODS);
     fake.world().sticky.output = Some(PODS.into());
     let (mut e, rec) = boot(fake, d.path());
-    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 200);
-    e.tick(at(350));
+    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 10_200);
+    e.tick(at(10_350));
+    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 10_500);
+    e.tick(at(10_650));
     let before = rec.notices();
-    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 500);
-    e.tick(at(650));
+    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 10_800);
+    e.tick(at(10_950));
     let paused = rec
         .calls()
         .iter()

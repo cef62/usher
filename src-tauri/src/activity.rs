@@ -77,7 +77,7 @@ fn owner_words(full_name: &str, user: &str) -> Vec<String> {
         .chain(user.split(|c: char| !c.is_alphanumeric()))
         .filter(|w| {
             let letters = w.chars().filter(|c| c.is_alphabetic()).count();
-            letters >= 3 || (letters >= 2 && w.chars().any(|c| c as u32 >= 0x1100))
+            letters >= 3 || (letters >= 2 && w.chars().any(usher_core::is_cjk))
         })
         .map(str::to_string)
         .collect()
