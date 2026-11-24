@@ -1,5 +1,13 @@
 # usher
 
+## 0.1.3
+
+### Patch Changes
+
+- 6c92895: Fixed a brief switch away from a USB audio device that moved port while usher was closed.
+- b90d10d: Replaced the app icon and the menu-bar icon with usher's own design: ranked bars with a sound wave on the top one.
+- eacdc6a: Fixed the panel footer overflowing when an update is waiting, and made What's new notes fade out under the title bar when scrolled.
+
 ## 0.1.2
 
 ### Patch Changes
