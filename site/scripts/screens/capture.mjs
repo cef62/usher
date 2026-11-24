@@ -46,7 +46,7 @@ for (const scheme of ['light', 'dark']) {
     await s.goto(`${BASE}/${page}`);
     // the pages are transparent over native glass: give them the panel's translucent tint on a flat backdrop
     await s.addStyleTag({ content: `html{background:${dark ? '#26262a' : '#f2f2f5'}!important}` });
-        await s.addStyleTag({ content: SWITCH(dark) });
+    await s.addStyleTag({ content: SWITCH(dark) });
     await s.waitForSelector('h1, h2');
     await s.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await s.waitForTimeout(800);

@@ -15,7 +15,7 @@ const toc = [
   ['logs', 'Logs and troubleshooting'],
 ];
 const keys = [
-  ['Tab', 'Move focus: the Auto-switch switch, the Output rows, the Input rows, Settings…, Quit. Each row has its own … button.'],
+  ['Tab', 'Move focus: the Auto-switch switch, the Output list, the Input list, then the footer buttons (Update to usher …, when one is waiting, Settings…, Quit). Inside a list, ↑ and ↓ move between rows; a ranked row and its … button share one stop.'],
   ['↑ ↓', 'Move focus to the previous or next row.'],
   ['Alt+↑ Alt+↓', 'Move the focused row up or down. Focus stays on it.'],
   ['Return', 'Move the focused row to the top.'],
@@ -80,7 +80,7 @@ const keys = [
         <p>The list order is the priority. usher uses the highest-ranked connected device.</p>
         <ul>
           <li><strong>Drag</strong> a row to a new place.</li>
-          <li><strong>Click</strong> a row, or focus it and press <kbd>Return</kbd>, to move it to the top.</li>
+          <li><strong>Click</strong> a row, or focus it and press <kbd>Return</kbd>, to move it to the top. This also clears Never use for it.</li>
           <li><strong>Keyboard:</strong> focus a row, then press <kbd>Alt+↑</kbd> or <kbd>Alt+↓</kbd> to move it.</li>
           <li><strong>… menu</strong> on a row: <strong>Move up</strong>, <strong>Move down</strong>, <strong>Never use</strong> (or <strong>Use</strong>) and, for a disconnected device, <strong>Forget…</strong>.</li>
         </ul>
@@ -106,7 +106,7 @@ const keys = [
           <li>Turn it on or off with the switch in the panel, or with <strong>Auto-switch</strong> in the right-click menu. When it is off, the menu-bar icon gets a slash and its tooltip reads “usher: auto-switch off”.</li>
         </ul>
         <h3>The loop guard</h3>
-        <p>Another app can fight usher over a device. usher then stops by itself: if it has to correct the same device three times in 10 seconds, it turns Auto-switch off.</p>
+        <p>Another app can fight usher over a device. usher then stops by itself: if it has to correct the output (or the input) three times in 10 seconds, it turns Auto-switch off.</p>
         <Shot name="panel-paused" alt="The usher panel with Auto-switch off and the line “usher paused auto-switch: AirPods Pro kept taking output”." caption="After the loop guard trips." narrow />
         <ul>
           <li>The panel shows “usher paused auto-switch: AirPods Pro kept taking output” (with your device and role) until you turn Auto-switch back on.</li>
@@ -118,7 +118,7 @@ const keys = [
       <section id="never-use">
         <h2>Never use and Forget</h2>
         <ul>
-          <li><strong>Never use</strong> (in the … menu) keeps usher from picking that device. The row stays in the list, struck through, and shows “never use”. Choose <strong>Use</strong> to undo it.</li>
+          <li><strong>Never use</strong> (in the … menu) keeps usher from picking that device. The row stays in the list, struck through, and shows “never use”. Choose <strong>Use</strong>, or click the row to move it to the top, to undo it.</li>
           <li>usher flags virtual and aggregate devices <strong>never use</strong> when it first sees them.</li>
           <li>The panel always shows the active device, even one marked never use.</li>
           <li>usher remembers disconnected devices, so a device keeps its rank when you plug it back in.</li>
@@ -131,7 +131,7 @@ const keys = [
         <ul>
           <li>Some USB audio devices get a new macOS identity when you plug them into another port. usher recognises such a device and keeps its rank, so it does not appear twice.</li>
           <li>The same holds for displays that you disconnect and connect again.</li>
-          <li>usher cannot tell two identical devices apart when both are plugged in at once. It then stops merging them.</li>
+          <li>usher cannot tell two identical devices apart when both are plugged in at once. From then on, usher stops merging devices of that model, even after a restart.</li>
           <li>Bluetooth devices match by their exact identity only.</li>
           <li>At launch, usher waits a moment for USB devices to appear, so a device that moved port while usher was closed does not cause a brief switch away. A change can also take about half a second longer to apply while a USB device is still being identified.</li>
         </ul>
@@ -140,12 +140,12 @@ const keys = [
       <section id="settings">
         <h2>Settings</h2>
         <p>Open it with <strong>Settings…</strong> in the panel or in the right-click menu. Changes apply at once.</p>
-        <Shot name="settings" alt="The usher Settings window: Open at login, Check for updates daily with Check now, Debug logging with Show log in Finder, and the version." caption="Settings." narrow />
+        <Shot name="settings" alt="The usher Settings window: Open at login, Check for updates daily with Check now, Debug logging with Show log in Finder, and the version. An update is waiting: the Updates group shows “usher 0.1.3 is available.” and a What's new… button." caption="Settings." narrow />
         <ul>
           <li><strong>Open at login:</strong> start usher when you log in. If macOS lists usher as not allowed in System Settings › General › Login Items, allow it there. A development build refuses this change.</li>
           <li><strong>Check for updates daily:</strong> look for updates by itself. <strong>Check now</strong> checks at once.</li>
           <li><strong>Debug logging:</strong> add detail to the log. The panel shows a <strong>Debug</strong> tag while it is on.</li>
-          <li><strong>Show log in Finder:</strong> open the log folder.</li>
+          <li><strong>Show log in Finder:</strong> select <code>usher.log</code> in Finder (or open its folder when there is no log yet).</li>
           <li><strong>Version</strong> at the bottom.</li>
         </ul>
       </section>
@@ -154,7 +154,7 @@ const keys = [
         <h2>Updates</h2>
         <ul>
           <li>With <strong>Check for updates daily</strong> on, usher checks 30 seconds after it starts, then once a day.</li>
-          <li><strong>Check now</strong> in Settings and <strong>Check for Updates…</strong> in the right-click menu check at once. The Settings line reads “usher 0.1.3 is up to date.” or “usher 0.1.3 is available.” (with your version). A failed check reads “Could not check for updates:” and the reason.</li>
+          <li><strong>Check now</strong> in Settings and <strong>Check for Updates…</strong> in the right-click menu check at once. The Settings line reads “usher 0.1.3 is up to date.” (your version) or “usher 0.1.4 is available.” (the new one). A failed check reads “Could not check for updates:” and the reason.</li>
           <li>usher never interrupts you. A found update shows as <strong>Update to usher X…</strong> in the panel footer and in the right-click menu, and as a <strong>What's new…</strong> button in Settings. Each opens What's new.</li>
         </ul>
         <Shot name="whatsnew" alt="The What's new window with the release notes and the Later and Install and restart buttons." caption="What's new." narrow />
