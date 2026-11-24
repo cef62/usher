@@ -90,12 +90,13 @@ Triggers: `Launch`, `DevicesChanged`, `DefaultChanged(role)`, `Command`, `Rebind
 an unplug fires devices-changed and default-changed inside one 150 ms window, and reading causes from event
 order is the heuristic class ADR 0003 rejects. First match wins:
 
-1. `Disconnected(key)`: the role's previous current device is not connected in `snap` ("<name> disconnected").
-2. `Connected(key)`: `desired` was not connected in `prev` and is in `snap` ("<name> connected").
-3. `Ranked`: the trigger is `Command` (the user changed the list in usher; history only, no notice).
-4. `Corrected(key)`: current ≠ desired and both were already connected; the taker is `snap`'s current
+1. `Launch` / `Rebind`: the trigger is `Launch` or `Rebind`, or `prev` is `None` (history only, no notice;
+   login and a coreaudiod restart reset defaults, which is not news).
+2. `Disconnected(key)`: the role's previous current device is not connected in `snap` ("<name> disconnected").
+3. `Connected(key)`: `desired` was not connected in `prev` and is in `snap` ("<name> connected").
+4. `Ranked`: the trigger is `Command` (the user changed the list in usher; history only, no notice).
+5. `Corrected(key)`: current ≠ desired and both were already connected; the taker is `snap`'s current
    ("<taker> took output; usher put it back"). It names the device that holds the role, not who moved it.
-5. `Launch` / `Rebind`: the trigger is `Launch` or `Rebind` (history only, no notice).
 
 The trigger only tells `Command`, `Launch` and `Rebind` apart from device events; when the window merges a
 `Command` with device events, the trigger is `Command`. A reconcile that changes nothing makes no entry.
@@ -203,7 +204,9 @@ Vendor and product are the names already in the UID; no new IOKit reads (call).
     ones are added on the device that is now the default (the UID is translated again);
   - removing a listener from a device that has vanished returns an error: it is logged at `debug` and
     ignored;
-  - the existing generation counter drops callbacks from an older registration.
+  - the existing generation counter drops callbacks from an older registration;
+  - after registering, the engine re-reads the role's levels once, so a change made between removal and
+    registration is not lost.
   They send a new `AudioEvent::LevelChanged(role)`.
 
 ### 6.3 Engine and view
@@ -213,10 +216,13 @@ Vendor and product are the names already in the UID; no new IOKit reads (call).
   with `LevelRequest::{Volume { role, key, value }, Mute { role, key, on }}`, handled directly by the engine:
   no store write, no reconcile.
 - Gating as for commands: refused `NotReady` before the first scan and `Rebinding` during a rebind; a new
-  `Refusal::Stale` when `key` is no longer the role's default, so a drag never moves the volume of a device
+  `Refusal::Stale` when `key` is no longer the role's default, checked by a **live read** of the role's
+  default device in the handler (the last scan can lag a `DefaultChanged` by the 150 ms window), so a drag never moves the volume of a device
   that just stopped being active.
 - A failed write logs a `warn`, re-reads the role's levels (the slider snaps back to the real value) and shows
   `Couldn't set volume: <error>` (or mute) under that role's strip until the next successful change.
+- A refusal (`NotReady`, `Rebinding`, `Stale`) is silent in the panel: the slider re-syncs from the next
+  view, and the refusal is logged at `debug` once per drag.
 - `LevelChanged(role)` reads that role's levels and emits the view at once, without a scan or the 150 ms
   coalescing window, so the slider echo feels immediate.
 - `PanelView` gains `levels: PerRole<Option<Level>>`, `Level { volume: Option<f32>, muted: Option<bool> }`
@@ -269,8 +275,8 @@ The first M8 task settles what the spike could not verify, before any M8 code:
 - The `…` menu of a **remembered** Bluetooth row that is disconnected and paired (from the same report) gets
   **Connect**; a connected one gets **Disconnect** (owner). Paired devices usher has never seen are not
   listed (the lists stay the remembered devices, v1 §5.5).
-- Like volume, these are engine events, not `usher_core::Command`s: `Event::Bluetooth` requests
-  `Connect { key }` / `Disconnect { key }`; the engine resolves the address from the UID
+- Like volume, these are engine events, not `usher_core::Command`s: `Event::BtAction(BtRequest, reply)` with
+  `BtRequest::{Connect { key }, Disconnect { key }}` (`Event::Bluetooth(report)` stays the poll result); the engine resolves the address from the UID
   and runs `openConnection` / `closeConnection` on a short-lived worker thread (the call blocks for seconds).
 - The row shows `Connecting…` (or `Disconnecting…`) for up to 10 s. Success is the device appearing in a scan; on timeout or error
   the row shows `Couldn't connect <name>` / `Couldn't disconnect <name>` (or the error). Disconnect succeeds
@@ -289,7 +295,7 @@ The first M8 task settles what the spike could not verify, before any M8 code:
 - usher-core: `Entry`, `explain`, notice and diagnostics text renderers, redaction, `Level`, the Bluetooth
   parser and address matcher, the `SetNotify` command.
 - usher-coreaudio: level reads, writes and listeners; `bluetooth.rs`.
-- src-tauri: engine trigger tracking, `Event::Diagnostics`, `Event::Level`, the Bluetooth engine events, `Shell::activity`, `ActivityLog`, the Activity window, the Bluetooth
+- src-tauri: engine trigger tracking, `Event::Diagnostics`, `Event::Level`, `Event::Bluetooth`, `Event::BtAction`, `Shell::activity`, `ActivityLog`, the Activity window, the Bluetooth
   poller, the tray's four icon images.
 - src: Activity page (`activity.html`), the panel level strip and battery badges, row menu items, Settings
   rows (Notify when usher switches, Open Activity…).
