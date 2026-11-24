@@ -8,7 +8,7 @@
 
 **Tech Stack:** existing only: `tauri-plugin-notification` (already used for the pause), `navigator.clipboard` (no clipboard plugin), React 19, Vitest with happy-dom. No new dependency.
 
-**Spec:** `docs/superpowers/specs/2026-11-24-usher-v2-design.md` (§2 goals, non-goals, anti-goals; §3; §5 M6; §8; §9 ADR 0011; §10; §11 release 0.2.0). The v1 spec `docs/superpowers/specs/2026-11-23-usher-design.md` still holds (§5.3 error rule, §5.4 loop guard and pause notification, §5.11 logging and privacy). This plan applies the PR #16 review corrections to §5.1, §5.2 and §5.4 (listed in Decisions 1–4). The spec file is updated to match them on this branch.
+**Spec:** `docs/superpowers/specs/2026-11-24-usher-v2-design.md` (§2 goals, non-goals, anti-goals; §3; §5 M6; §8; §9 ADR 0011; §10; §11 release 0.2.0). The v1 spec `docs/superpowers/specs/2026-11-23-usher-design.md` still holds (§5.3 error rule, §5.4 loop guard and pause notification, §5.11 logging and privacy). This plan applies the PR #16 review corrections to §5.1, §5.2 and §5.4 (listed in Decisions 1–4). PR #16 merged those corrections into the spec.
 
 **Branch:** `feat/m6-activity` (exists). One PR.
 
