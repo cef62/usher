@@ -75,9 +75,7 @@ impl Shell for TauriShell {
     }
 
     fn activity(&self, entry: &Entry) {
-        let wall = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |d| d.as_millis() as u64);
+        let wall = wall_ms();
         let Some(log) = self.0.try_state::<ActivityLog>() else {
             return;
         };
@@ -92,20 +90,34 @@ impl Shell for TauriShell {
     }
 
     fn paused(&self, reason: &PausedReason) {
-        let app = self.0.clone();
-        let body = reason.message();
-        // permission calls can block on a system prompt: never on the engine thread
-        std::thread::spawn(move || {
-            let n = app.notification();
-            let granted = match n.permission_state() {
-                Ok(PermissionState::Granted) => true,
-                _ => matches!(n.request_permission(), Ok(PermissionState::Granted)),
-            };
-            if granted && let Err(e) = n.builder().title("usher").body(body).show() {
-                warn!("notification failed ({e})");
-            }
-        });
+        show(self.0.clone(), reason.message());
     }
+
+    fn notice(&self, body: &str) {
+        show(self.0.clone(), body.into());
+    }
+}
+
+fn wall_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis() as u64)
+}
+
+/// Shows a system notification. Permission calls can block on a system prompt: never on the engine thread.
+fn show(app: AppHandle, body: String) {
+    std::thread::spawn(move || {
+        let n = app.notification();
+        let granted = match n.permission_state() {
+            Ok(PermissionState::Granted) => true,
+            _ => matches!(n.request_permission(), Ok(PermissionState::Granted)),
+        };
+        if !granted {
+            warn!("notifications are not allowed; notice not shown");
+        } else if let Err(e) = n.builder().title("usher").body(body).show() {
+            warn!("notification failed ({e})");
+        }
+    });
 }
 
 /// Opens the store and starts the engine thread. `CoreAudioSystem` is !Send, so it is built inside the thread.
@@ -114,9 +126,7 @@ pub fn spawn(app: &AppHandle, rx: Receiver<Event>, notify: Notify, dir: PathBuf)
     let (store, state) = Store::open(dir.join("state.json"));
     logging::apply(state.as_ref().is_some_and(|s| s.debug));
     let shell = TauriShell(app.clone());
-    let wall = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_millis() as u64);
+    let wall = wall_ms();
     let spawned = std::thread::Builder::new()
         .name("usher-engine".into())
         .spawn(move || {

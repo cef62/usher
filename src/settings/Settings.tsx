@@ -32,6 +32,20 @@ export function SettingsPage({ initial, api }: { initial: SettingsView; api: typ
           />
         </label>
         {note && <p className="row note">{note}</p>}
+        <label className="row">
+          Notify when usher switches
+          <input
+            type="checkbox"
+            // @ts-expect-error see above
+            switch=""
+            checked={view.notifySwitches}
+            onChange={(e) => {
+              const on = e.target.checked;
+              void run(async () => (await api.setNotify(on), setView({ ...view, notifySwitches: on })));
+            }}
+          />
+        </label>
+        <p className="row note">usher always tells you when it pauses Auto-switch.</p>
       </div>
       <Updates
         view={view}

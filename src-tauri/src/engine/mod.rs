@@ -18,8 +18,8 @@ use std::time::{Duration, Instant};
 use log::debug;
 use serde::Serialize;
 use usher_core::{
-    Command, Entry, PanelState, PausedReason, PerRole, Runtime, Snapshot, State, Timestamp,
-    Trigger, panel_state,
+    Command, Entry, NoticeGate, PanelState, PausedReason, PerRole, Runtime, Snapshot, State,
+    Timestamp, Trigger, panel_state,
 };
 use usher_coreaudio::{AudioEvent, AudioSystem, Notify};
 
@@ -47,6 +47,7 @@ pub trait Shell {
     fn paused(&self, reason: &PausedReason);
     fn debug_changed(&self, on: bool);
     fn activity(&self, entry: &Entry);
+    fn notice(&self, body: &str);
 }
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
@@ -87,6 +88,7 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     reconcile_due: Option<Instant>,
     /// What woke the pending reconcile (merged); kept through a USB deferral and a scan retry.
     trigger: Option<Trigger>,
+    notices: NoticeGate,
     usb_due: Option<Instant>,
     /// A recheck ran since the last device event: do not schedule another.
     usb_rechecked: bool,
@@ -121,6 +123,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             errors: PerRole::default(),
             reconcile_due: None,
             trigger: Some(Trigger::Launch),
+            notices: NoticeGate::default(),
             usb_due: None,
             usb_rechecked: false,
             notify,

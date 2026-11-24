@@ -25,12 +25,21 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         snap: &Snapshot,
         reasons: &[Reason],
         wrote: &PerRole<Wrote>,
-        _now: Instant,
+        now: Instant,
     ) {
-        for r in reasons {
-            if let Some(e) = explain(trigger, prev, snap, r, wrote.get(r.role)) {
-                self.record(&e);
-            }
+        let entries: Vec<Entry> = reasons
+            .iter()
+            .filter_map(|r| explain(trigger, prev, snap, r, wrote.get(r.role)))
+            .collect();
+        for e in &entries {
+            self.record(e);
+        }
+        // paused keeps its own always-on notice, so a tripped reconcile adds none here
+        if self.state.notify_switches
+            && self.state.auto_switch
+            && let Some(body) = self.notices.body(trigger, &entries, self.clock.wall(now))
+        {
+            self.shell.notice(&body);
         }
     }
 }

@@ -11,7 +11,7 @@ const row = (key: string, name: string, rank: number | null, o: Partial<Row> = {
   key, name, rank, connected: true, active: false, neverUse: false, lastSeen: null, canForget: false, ...o,
 });
 const v = (p: Partial<View> = {}): View => ({
-  autoSwitch: false, debug: false, paused: null, readOnly: false,
+  autoSwitch: false, debug: false, notifySwitches: true, paused: null, readOnly: false,
   output: [
     row("BuiltInSpeakerDevice", "spk", 1, { active: true }),
     row("StudioDisplay-uid", "Studio Display", 2),

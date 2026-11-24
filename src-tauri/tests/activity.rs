@@ -244,3 +244,128 @@ fn a_deferred_command_keeps_its_trigger() {
         })
     ));
 }
+
+fn correct(e: &mut Engine, fake: &Fake, t: u64) {
+    fake.world().current.output = Some(PODS.into());
+    dev_event(e, AudioEvent::DefaultChanged(Role::Output), t);
+    e.tick(at(t + 150));
+}
+
+#[test]
+fn a_connect_notifies_once_for_both_roles() {
+    let d = tempfile::tempdir().unwrap();
+    let mut s = ranked(&[PODS, SPK]);
+    s.input.order = vec![PODS.into(), "BuiltInMicrophoneDevice".into()];
+    state_file(d.path(), &s);
+    let fake = world(vec![spk(), mic()], SPK);
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    fake.world().devices.push(pods());
+    dev_event(&mut e, AudioEvent::DevicesChanged, 100);
+    e.tick(at(300));
+    assert_eq!(
+        rec.notices(),
+        vec!["Output: MacBook Pro Speakers → AirPods\nInput: MacBook Pro Microphone → AirPods"]
+    );
+}
+
+#[test]
+fn launch_rebind_and_commands_never_notify() {
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[PODS, SPK]));
+    let fake = world(vec![spk(), pods(), mic()], SPK);
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    dev_event(&mut e, AudioEvent::ServiceRestarted, 100);
+    fake.world().current.output = Some(SPK.into());
+    e.tick(at(1_200));
+    let order = vec![SPK.into(), PODS.into()];
+    let cmd = Command::Reorder {
+        role: Role::Output,
+        order,
+    };
+    assert_eq!(ask(&mut e, cmd, 2_000), Ok(()));
+    e.tick(at(2_300));
+    assert!(rec.entries().len() >= 3, "{:?}", rec.entries());
+    assert_eq!(rec.notices(), Vec::<String>::new());
+
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[SPK, PODS]));
+    let fake = world(vec![spk(), pods(), mic()], SPK);
+    fail_pods(&fake);
+    let (mut e, rec) = boot(fake, d.path());
+    let cmd = Command::Promote {
+        role: Role::Output,
+        key: PODS.into(),
+    };
+    assert_eq!(ask(&mut e, cmd, 100), Ok(()));
+    e.tick(at(300));
+    assert!(matches!(rec.entries().last(), Some(Entry::Failed { .. })));
+    assert_eq!(rec.notices(), Vec::<String>::new());
+}
+
+#[test]
+fn notices_are_capped_per_role() {
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[SPK, PODS]));
+    let fake = world(vec![spk(), pods(), mic()], SPK);
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    for t in [200, 5_000, 11_000] {
+        correct(&mut e, &fake, t);
+    }
+    assert_eq!(rec.notices().len(), 2);
+    assert_eq!(rec.entries().len(), 3);
+}
+
+#[test]
+fn notices_off_still_records_history() {
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[SPK, PODS]));
+    let fake = world(vec![spk(), pods(), mic()], SPK);
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    assert_eq!(ask(&mut e, Command::SetNotify(false), 10), Ok(()));
+    correct(&mut e, &fake, 200);
+    assert_eq!(rec.entries().len(), 1);
+    assert!(rec.notices().is_empty());
+    e.tick(at(3_000));
+    assert!(!read_state(d.path()).notify_switches);
+}
+
+#[test]
+fn the_trip_notifies_only_through_paused() {
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[SPK, PODS]));
+    let fake = world(vec![spk(), pods(), mic()], PODS);
+    fake.world().sticky.output = Some(PODS.into());
+    let (mut e, rec) = boot(fake, d.path());
+    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 200);
+    e.tick(at(350));
+    let before = rec.notices();
+    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 500);
+    e.tick(at(650));
+    let paused = rec
+        .calls()
+        .iter()
+        .filter(|c| matches!(c, Call::Paused(_)))
+        .count();
+    assert_eq!(paused, 1);
+    assert_eq!(
+        rec.notices(),
+        before,
+        "the tripping reconcile adds no notice"
+    );
+}
+
+#[test]
+fn a_failed_switch_notifies() {
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[PODS, SPK]));
+    let fake = world(vec![spk(), mic()], SPK);
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    fake.world().devices.push(pods());
+    fail_pods(&fake);
+    dev_event(&mut e, AudioEvent::DevicesChanged, 100);
+    e.tick(at(300));
+    assert_eq!(
+        rec.notices(),
+        vec!["Couldn't switch output to AirPods: set default failed (OSStatus -50)"]
+    );
+}

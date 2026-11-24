@@ -48,10 +48,11 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             warn!("forget refused: rebinding");
             return Err(Refusal::Rebinding);
         }
-        let (was_on, was_debug, was_check) = (
+        let was = (
             self.state.auto_switch,
             self.state.debug,
             self.state.update_check,
+            self.state.notify_switches,
         );
         let forgot = match &cmd {
             Command::Forget { key } => Some((self.name_of(snap, key), key.clone())),
@@ -60,7 +61,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         match apply(&mut self.state, &mut self.rt, snap, cmd) {
             Ok(true) => {
                 self.store.mark_dirty(now);
-                self.announce((was_on, was_debug, was_check), forgot);
+                self.announce(was, forgot);
                 self.emit();
                 self.schedule_reconcile(now, Trigger::Command);
                 Ok(())
@@ -74,8 +75,8 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     }
 
     /// Log and tell the shell about what the command changed.
-    fn announce(&mut self, was: (bool, bool, bool), forgot: Option<(String, DeviceKey)>) {
-        let (was_on, was_debug, was_check) = was;
+    fn announce(&mut self, was: (bool, bool, bool, bool), forgot: Option<(String, DeviceKey)>) {
+        let (was_on, was_debug, was_check, was_notify) = was;
         let word = |b: bool| if b { "on" } else { "off" };
         if was_on != self.state.auto_switch {
             let on = self.state.auto_switch;
@@ -94,6 +95,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         }
         if was_check != self.state.update_check {
             info!("daily update check {}", word(self.state.update_check));
+        }
+        if was_notify != self.state.notify_switches {
+            info!("switch notices {}", word(self.state.notify_switches));
         }
         if let Some((name, key)) = forgot {
             info!("forgot {name} ({key})");

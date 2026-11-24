@@ -107,6 +107,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             settings::set_debug,
             settings::reveal_log,
             settings::set_update_check,
+            settings::set_notify,
             update::check_update,
             whatsnew::open_whatsnew,
             whatsnew::whatsnew_info,

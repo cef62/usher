@@ -24,6 +24,7 @@ export const settingsApi = {
   setLogin: (on: boolean) => invoke<boolean>("set_login", { enabled: on }),
   setDebug: (on: boolean) => invoke<void>("set_debug", { on }),
   setUpdateCheck: (on: boolean) => invoke<void>("set_update_check", { on }),
+  setNotify: (on: boolean) => invoke<void>("set_notify", { on }),
   checkNow: () => invoke<{ version: string } | null>("check_update"),
   // the daily check and the panel publish the pending version with every view
   onUpdate: (cb: (version: string | null) => void) => listen<View>("state-changed", (e) => cb(e.payload.update)),

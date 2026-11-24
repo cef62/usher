@@ -113,6 +113,7 @@ pub enum Call {
     Paused(PausedReason),
     Debug(bool),
     Activity(Entry),
+    Notice(String),
 }
 
 #[derive(Clone, Default)]
@@ -128,6 +129,16 @@ impl Recorder {
             .into_iter()
             .filter_map(|c| match c {
                 Call::Activity(e) => Some(e),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn notices(&self) -> Vec<String> {
+        self.calls()
+            .into_iter()
+            .filter_map(|c| match c {
+                Call::Notice(b) => Some(b),
                 _ => None,
             })
             .collect()
@@ -156,6 +167,9 @@ impl Shell for Recorder {
     }
     fn activity(&self, entry: &Entry) {
         self.0.lock().unwrap().push(Call::Activity(entry.clone()));
+    }
+    fn notice(&self, body: &str) {
+        self.0.lock().unwrap().push(Call::Notice(body.into()));
     }
 }
 

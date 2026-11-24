@@ -22,6 +22,7 @@ pub const SETTINGS_COMMANDS: &[&str] = &[
     "set_debug",
     "reveal_log",
     "set_update_check",
+    "set_notify",
     "check_update",
     "open_whatsnew",
 ];

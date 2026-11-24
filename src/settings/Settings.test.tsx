@@ -6,7 +6,7 @@ import { click, mount } from "../test/dom";
 import type { SettingsView } from "../types";
 import { SettingsPage } from "./Settings";
 
-const view = (p: Partial<SettingsView> = {}): SettingsView => ({ login: false, loginRefusal: null, debug: false, updateCheck: true, update: null, version: "0.1.0", ...p });
+const view = (p: Partial<SettingsView> = {}): SettingsView => ({ login: false, loginRefusal: null, debug: false, updateCheck: true, notifySwitches: true, update: null, version: "0.1.0", ...p });
 let calls: unknown[][] = [];
 let checkResult: () => Promise<{ version: string } | null>;
 let loginResult: () => Promise<boolean>;
@@ -16,6 +16,7 @@ const api: typeof settingsApi = {
   setLogin: (on) => (calls.push(["setLogin", on]), loginResult()),
   setDebug: async (on) => void calls.push(["setDebug", on]),
   setUpdateCheck: async (on) => void calls.push(["setUpdateCheck", on]),
+  setNotify: async (on) => void calls.push(["setNotify", on]),
   checkNow: () => checkResult(),
   openWhatsNew: async () => void calls.push(["openWhatsNew"]),
   fit: async () => {},
@@ -79,6 +80,14 @@ test("turns the daily check off through the engine", async () => {
   await act(async () => click(checkbox(root, "Check for updates daily")));
   expect(calls).toEqual([["setUpdateCheck", false]]);
   expect(checkbox(root, "Check for updates daily").checked).toBe(false);
+});
+
+test("turns switch notices off through the engine", async () => {
+  const { root } = mount(<SettingsPage initial={view()} api={api} />);
+  expect(checkbox(root, "Notify when usher switches").checked).toBe(true);
+  await act(async () => click(checkbox(root, "Notify when usher switches")));
+  expect(calls).toEqual([["setNotify", false]]);
+  expect(checkbox(root, "Notify when usher switches").checked).toBe(false);
 });
 
 const status = (r: Element) => r.querySelector('[role="status"]')!.textContent;
