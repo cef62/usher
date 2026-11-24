@@ -20,6 +20,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 return false;
             }
         };
+        self.usb_unresolved = scan.usb_unresolved;
         // an unresolved verdict can hide a serial-less USB device that moved port: acting now would switch away
         // from it and back 500 ms later, so the recheck acts instead (seeding too)
         if scan.usb_unresolved && !self.usb_rechecked {

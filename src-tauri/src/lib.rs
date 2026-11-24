@@ -97,6 +97,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             }
         })
         .invoke_handler(commands::with_window_guard(tauri::generate_handler![
+            activity::get_diagnostics,
             commands::get_view,
             commands::run_command,
             panel::hide_panel,

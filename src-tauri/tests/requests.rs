@@ -272,3 +272,15 @@ fn update_check_off_is_saved_and_in_the_view() {
     let saved = std::fs::read_to_string(d.path().join("state.json")).unwrap();
     assert!(saved.contains("\"update_check\": false"), "{saved}");
 }
+
+#[test]
+fn diagnostics_through_the_run_loop() {
+    let d = tempfile::tempdir().unwrap();
+    let (e, _) = boot(trio(), d.path());
+    let (h, rx) = EngineHandle::new();
+    let t = std::thread::spawn(move || run(e, rx));
+    assert!(h.diagnostics(REQUEST_TIMEOUT).unwrap().engine.subscribed);
+    assert!(h.quit(REQUEST_TIMEOUT));
+    t.join().unwrap();
+    assert_eq!(h.diagnostics(REQUEST_TIMEOUT), Err(Refusal::Gone));
+}

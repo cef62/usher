@@ -369,3 +369,41 @@ fn a_failed_switch_notifies() {
         vec!["Couldn't switch output to AirPods: set default failed (OSStatus -50)"]
     );
 }
+
+fn trio() -> Fake {
+    Fake::with(vec![spk(), pods(), mic()], SPK, "BuiltInMicrophoneDevice")
+}
+
+fn diagnose(e: &mut Engine, t: u64) -> usher_core::Diagnostics {
+    let (tx, rx) = std::sync::mpsc::channel();
+    e.handle(Event::Diagnostics(tx), at(t));
+    rx.recv().unwrap()
+}
+
+#[test]
+fn diagnostics_answer_before_the_first_scan() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    fake.world().fail_scan = 5;
+    let (mut e, _) = boot(fake, d.path());
+    let d = diagnose(&mut e, 10);
+    assert!(!d.engine.scanned && d.devices.is_empty());
+    assert_eq!(d.engine.rebinding, Some(2), "first retry pending");
+}
+
+#[test]
+fn diagnostics_report_the_scan_and_the_ranked_skips() {
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[PODS, SPK]));
+    let fake = trio();
+    fake.world().devices.retain(|d| d.uid.0 != PODS);
+    let (mut e, _) = boot(fake, d.path());
+    e.tick(at(1_000));
+    let d = diagnose(&mut e, 1_000);
+    assert!(d.engine.scanned && d.engine.subscribed && !d.engine.read_only);
+    assert_eq!(
+        d.roles[0].ranked[0].skip,
+        Some(usher_core::Skip::Disconnected)
+    );
+    assert_eq!(d.devices.len(), 2);
+}

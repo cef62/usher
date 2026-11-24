@@ -3,7 +3,9 @@
 use std::time::Instant;
 
 use log::info;
-use usher_core::{Entry, PerRole, Reason, Snapshot, Trigger, Wrote, explain};
+use usher_core::{
+    Diagnostics, EngineStatus, Entry, PerRole, Reason, Snapshot, Trigger, Wrote, diagnose, explain,
+};
 use usher_coreaudio::AudioSystem;
 
 use super::{Engine, Shell};
@@ -41,5 +43,21 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         {
             self.shell.notice(&body);
         }
+    }
+
+    /// What a bug report needs; `app` stays empty, the shell fills it.
+    pub fn diagnostics(&self) -> Diagnostics {
+        let status = EngineStatus {
+            scanned: self.snap.is_some(),
+            subscribed: self.subscribed,
+            rebinding: self.rebinding().then_some(self.rebind_attempt + 1),
+            read_only: !self.store.writable(),
+            usb_unresolved: self.usb_unresolved,
+        };
+        let empty = Snapshot {
+            devices: Vec::new(),
+            current: PerRole::default(),
+        };
+        diagnose(&self.state, self.snap.as_ref().unwrap_or(&empty), status)
     }
 }

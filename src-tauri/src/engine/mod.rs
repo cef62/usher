@@ -18,8 +18,8 @@ use std::time::{Duration, Instant};
 use log::debug;
 use serde::Serialize;
 use usher_core::{
-    Command, Entry, NoticeGate, PanelState, PausedReason, PerRole, Runtime, Snapshot, State,
-    Timestamp, Trigger, panel_state,
+    Command, Diagnostics, Entry, NoticeGate, PanelState, PausedReason, PerRole, Runtime, Snapshot,
+    State, Timestamp, Trigger, panel_state,
 };
 use usher_coreaudio::{AudioEvent, AudioSystem, Notify};
 
@@ -32,6 +32,8 @@ pub enum Event {
     Audio(AudioEvent),
     Command(Command, Option<Reply>),
     ToggleAutoSwitch,
+    /// Answered with the engine's own view; the shell fills `app`.
+    Diagnostics(Sender<Diagnostics>),
     Quit(Sender<()>),
 }
 
@@ -92,6 +94,8 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     usb_due: Option<Instant>,
     /// A recheck ran since the last device event: do not schedule another.
     usb_rechecked: bool,
+    /// The last scan could not tell a serial-less USB device from a moved one.
+    usb_unresolved: bool,
     notify: Notify,
     subscribed: bool,
     rebind_due: Option<Instant>,
@@ -126,6 +130,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             notices: NoticeGate::default(),
             usb_due: None,
             usb_rechecked: false,
+            usb_unresolved: false,
             notify,
             subscribed: false,
             rebind_due: None,
@@ -152,6 +157,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 let _ = self.on_command(Command::SetAutoSwitch(on), now);
                 // the tray flipped its own check on click: say the truth on every path (dropped, no-op, rejected)
                 self.shell.auto_switch_changed(self.state.auto_switch);
+            }
+            Event::Diagnostics(tx) => {
+                let _ = tx.send(self.diagnostics());
             }
             Event::Quit(done) => {
                 self.shutdown();

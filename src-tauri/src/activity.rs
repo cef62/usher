@@ -1,10 +1,14 @@
 //! The activity history the engine feeds: the newest [`HISTORY`] lines, newest first.
 
 use std::collections::VecDeque;
-use std::sync::Mutex;
+use std::process::Command;
+use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
-use usher_core::Entry;
+use tauri::{AppHandle, Manager, State};
+use usher_core::{AppInfo, Entry, render_diagnostics};
+
+use crate::engine::{EngineHandle, REQUEST_TIMEOUT};
 
 pub const HISTORY: usize = 200;
 /// The Activity window's label; lines are emitted to it only.
@@ -48,6 +52,72 @@ impl Log {
 #[derive(Default)]
 pub struct ActivityLog(pub Mutex<Log>);
 
+/// First line of a command's stdout, trimmed; `None` on any error.
+fn run_line(cmd: &str, args: &[&str]) -> Option<String> {
+    let out = Command::new(cmd).args(args).output().ok()?;
+    let text = String::from_utf8(out.stdout).ok()?;
+    out.status.success().then(|| text.trim().to_string())
+}
+
+pub fn macos_version() -> String {
+    static V: OnceLock<String> = OnceLock::new();
+    V.get_or_init(|| {
+        run_line("/usr/bin/sw_vers", &["-productVersion"])
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| "unknown".into())
+    })
+    .clone()
+}
+
+/// The words of the account's full name and short name worth stripping from a report: 3+ letters each.
+fn owner_words(full_name: &str, user: &str) -> Vec<String> {
+    full_name
+        .split_whitespace()
+        .chain([user])
+        .filter(|w| w.chars().filter(|c| c.is_alphabetic()).count() >= 3)
+        .map(str::to_string)
+        .collect()
+}
+
+fn owner_names() -> Vec<String> {
+    static N: OnceLock<Vec<String>> = OnceLock::new();
+    N.get_or_init(|| {
+        let full = run_line("/usr/bin/id", &["-F"]).unwrap_or_default();
+        owner_words(&full, &std::env::var("USER").unwrap_or_default())
+    })
+    .clone()
+}
+
+/// The redacted report for a GitHub issue. Blocking calls run off the main thread.
+#[tauri::command]
+pub async fn get_diagnostics(
+    app: AppHandle,
+    engine: State<'_, EngineHandle>,
+) -> Result<String, String> {
+    let engine = engine.inner().clone();
+    let log_path = app
+        .path()
+        .app_log_dir()
+        .map_err(|e| e.to_string())?
+        .join("usher.log");
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    let version = app.package_info().version.to_string();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut d = engine
+            .diagnostics(REQUEST_TIMEOUT)
+            .map_err(|e| e.to_string())?;
+        d.app = AppInfo {
+            version,
+            macos: macos_version(),
+            log_path: log_path.display().to_string(),
+            owner_names: owner_names(),
+        };
+        Ok(render_diagnostics(&d, &home.display().to_string()))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,5 +146,21 @@ mod tests {
         };
         let line = Log::default().push(5, &e);
         assert_eq!(line.why.as_deref(), Some("AirPods connected"));
+    }
+
+    #[test]
+    fn macos_version_is_a_dotted_number_or_unknown() {
+        let v = macos_version();
+        assert!(
+            v == "unknown" || v.split('.').all(|p| p.parse::<u32>().is_ok()),
+            "{v}"
+        );
+    }
+
+    #[test]
+    fn owner_words_keep_long_words_of_name_and_user() {
+        let w = owner_words("Ada Lo Lovelace", "ada");
+        assert_eq!(w, ["Ada", "Lovelace", "ada"]);
+        assert!(owner_words("", "").is_empty());
     }
 }
