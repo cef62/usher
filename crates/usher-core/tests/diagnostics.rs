@@ -69,6 +69,18 @@ fn non_ascii_owner_names_match_inside_a_part() {
 }
 
 #[test]
+fn ascii_owner_names_glued_to_a_cjk_particle_are_dropped() {
+    let taro = vec!["Taro".to_string(), "Yamada".to_string()];
+    assert!(!strip_owner("TaroのAirPods Pro", &taro).contains("Taro"));
+    assert_eq!(strip_owner("Taro의 AirPods", &taro), "AirPods");
+    assert!(!strip_owner("Yamada的AirPods", &taro).contains("Yamada"));
+    let ada = vec!["Ada".to_string()];
+    assert_eq!(strip_owner("Adapter Speakers", &ada), "Adapter Speakers");
+    let le = vec!["Lé".to_string()];
+    assert_eq!(strip_owner("élégant Speakers", &le), "élégant Speakers");
+}
+
+#[test]
 fn owner_names_and_home_are_dropped() {
     let ada = vec!["Ada".to_string(), "Lovelace".to_string(), "ada".to_string()];
     assert_eq!(strip_owner("Ada's AirPods Pro", &ada), "AirPods Pro");

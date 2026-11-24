@@ -69,7 +69,7 @@ pub fn macos_version() -> String {
     .clone()
 }
 
-/// The alphanumeric parts of the full name and short name worth stripping from a report: 3+ letters each, 2+ with a non-ASCII letter.
+/// The alphanumeric parts of the full name and short name worth stripping from a report: 3+ letters each, 2+ with a CJK or Hangul letter.
 /// Parts, not words: `strip_owner` compares whole alphanumeric parts, so `john.smith` must become `john`, `smith`.
 fn owner_words(full_name: &str, user: &str) -> Vec<String> {
     full_name
@@ -77,7 +77,7 @@ fn owner_words(full_name: &str, user: &str) -> Vec<String> {
         .chain(user.split(|c: char| !c.is_alphanumeric()))
         .filter(|w| {
             let letters = w.chars().filter(|c| c.is_alphabetic()).count();
-            letters >= 3 || (letters >= 2 && !w.is_ascii())
+            letters >= 3 || (letters >= 2 && w.chars().any(|c| c as u32 >= 0x1100))
         })
         .map(str::to_string)
         .collect()
@@ -223,6 +223,11 @@ mod tests {
             v == "unknown" || v.split('.').all(|p| p.parse::<u32>().is_ok()),
             "{v}"
         );
+    }
+
+    #[test]
+    fn owner_words_need_three_letters_unless_cjk() {
+        assert!(!owner_words("Lé Dupont", "ld").contains(&"Lé".to_string()));
     }
 
     #[test]

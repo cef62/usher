@@ -62,8 +62,23 @@ impl Redactor {
 
 const CONNECTORS: [&str; 8] = ["di", "de", "da", "du", "del", "von", "van", "of"];
 
+/// Owner words match a whole part; non-ASCII ones also inside it (`山田の…`, names glue to particles),
+/// ASCII ones also as a sub-part split at non-ASCII letters (`Taroの`, but never `Adapter` for `Ada`).
+fn hits(owners: &[String], part: &str) -> bool {
+    owners.iter().any(|o| {
+        o == part
+            || if o.is_ascii() {
+                part.split(|c: char| !c.is_ascii_alphanumeric())
+                    .any(|s| s == o)
+            } else {
+                part.contains(o.as_str())
+            }
+    })
+}
+
 /// Drops owner names from a device name: a leading `<x>'s`, and whole-word matches
-/// (with one connector word before them); non-ASCII names also match inside a word.
+/// (with one connector word before them); non-ASCII names also match inside a word, and ASCII
+/// names also match next to a non-ASCII particle (`Taroの`).
 pub fn strip_owner(name: &str, owner_names: &[String]) -> String {
     let mut words: Vec<&str> = name.split_whitespace().collect();
     if words.len() > 1 && (words[0].ends_with("'s") || words[0].ends_with("’s")) {
@@ -71,18 +86,22 @@ pub fn strip_owner(name: &str, owner_names: &[String]) -> String {
     }
     let owners: Vec<String> = owner_names
         .iter()
-        .filter(|o| o.chars().count() >= if o.is_ascii() { 3 } else { 2 })
+        // CJK and Hangul names are short; Latin and Cyrillic ones keep the 3-letter floor.
+        .filter(|o| {
+            o.chars().count()
+                >= if o.chars().any(|c| c as u32 >= 0x1100) {
+                    2
+                } else {
+                    3
+                }
+        })
         .map(|o| o.to_lowercase())
         .collect();
     let mut out: Vec<&str> = Vec::new();
     for w in words {
-        let is_owner = w.split(|c: char| !c.is_alphanumeric()).any(|part| {
-            let part = part.to_lowercase();
-            // Non-ASCII names sit glued to particles (`山田の…`), so they match inside a part.
-            owners
-                .iter()
-                .any(|o| *o == part || (!o.is_ascii() && part.contains(o.as_str())))
-        });
+        let is_owner = w
+            .split(|c: char| !c.is_alphanumeric())
+            .any(|part| hits(&owners, &part.to_lowercase()));
         if !is_owner {
             out.push(w);
         } else if out
