@@ -13,18 +13,21 @@
 mod activity;
 mod commands;
 mod desired;
+mod diagnostics;
 mod guard;
 pub mod identity;
 mod model;
 mod panel;
 mod reason;
 mod reconcile;
+mod redact;
 mod remember;
 mod seed;
 mod state;
 pub use activity::*;
 pub use commands::*;
 pub use desired::*;
+pub use diagnostics::*;
 pub use guard::*;
 pub use identity::Merge;
 #[doc(hidden)]
@@ -33,6 +36,7 @@ pub use model::*;
 pub use panel::*;
 pub use reason::*;
 pub use reconcile::*;
+pub use redact::*;
 #[doc(hidden)]
 pub use remember::remember;
 pub use seed::seed;
