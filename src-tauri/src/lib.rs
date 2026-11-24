@@ -180,13 +180,18 @@ mod tests {
     }
 
     #[test]
-    fn settings_capability_grants_log_and_set_size() {
+    fn settings_capability_grants_log_listen_and_set_size() {
         let cap: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/settings.json")).unwrap();
         assert_eq!(cap["windows"], serde_json::json!(["settings"]));
         assert_eq!(
             cap["permissions"],
-            serde_json::json!(["log:default", "core:window:allow-set-size"])
+            serde_json::json!([
+                "log:default",
+                "core:event:allow-listen",
+                "core:event:allow-unlisten",
+                "core:window:allow-set-size"
+            ])
         );
     }
 }

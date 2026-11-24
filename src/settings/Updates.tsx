@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { settingsApi } from "../api";
 import type { SettingsView } from "../types";
 
@@ -9,6 +9,10 @@ export function Updates({ view, api, run, onCheck }: Props) {
   const [version, setVersion] = useState(view.update);
   const [failure, setFailure] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  useEffect(() => {
+    const off = api.onUpdate(setVersion);
+    return () => void off.then((f) => f());
+  }, [api]);
   const checkNow = async () => {
     setChecking(true);
     try {
