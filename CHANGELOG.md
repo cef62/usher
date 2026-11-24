@@ -1,5 +1,11 @@
 # usher
 
+## 0.1.2
+
+### Patch Changes
+
+- 37a963e: Gave Settings and What's new the panel's translucent glass, and What's new stopped opening with its heading focused.
+
 ## 0.1.1
 
 ### Patch Changes
