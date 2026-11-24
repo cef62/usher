@@ -1,10 +1,9 @@
 mod common;
 use common::*;
-use std::sync::mpsc;
 use std::time::Duration;
 use usher_core::{Command, CommandError, DeviceKey, PerRole, Role, State};
 use usher_coreaudio::{AudioError, AudioEvent};
-use usher_lib::engine::{Engine, EngineHandle, Event, REQUEST_TIMEOUT, Refusal, run};
+use usher_lib::engine::{EngineHandle, Event, REQUEST_TIMEOUT, Refusal, run};
 
 fn trio() -> Fake {
     Fake::with(
@@ -21,13 +20,6 @@ fn autos(rec: &Recorder) -> usize {
         .count()
 }
 
-fn ranked(out: &[&str]) -> State {
-    let mut s = State::default();
-    s.input.order = vec!["BuiltInMicrophoneDevice".into()];
-    s.output.order = out.iter().map(|k| DeviceKey::from(*k)).collect();
-    s
-}
-
 fn fail(fake: &Fake, uid: &str) {
     fake.world().fail_set.insert(
         uid.into(),
@@ -36,12 +28,6 @@ fn fail(fake: &Fake, uid: &str) {
             status: -50,
         },
     );
-}
-
-fn ask(e: &mut Engine<Fake, Recorder>, cmd: Command, t: u64) -> Result<(), Refusal> {
-    let (tx, rx) = mpsc::channel();
-    e.handle(Event::Command(cmd, Some(tx)), at(t));
-    rx.try_recv().unwrap()
 }
 
 #[test]

@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod activity;
 mod commands;
 pub mod engine;
 mod glass;
@@ -47,6 +48,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let (handle, rx) = EngineHandle::new();
     app.manage(handle.clone());
     app.manage(shell::LastView(Mutex::new(None)));
+    app.manage(activity::ActivityLog::default());
     panel::setup(app.handle());
     update::setup(app.handle());
     if let Err(e) = tray::build(app.handle()) {

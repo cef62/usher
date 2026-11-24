@@ -2,6 +2,7 @@
 //! actions run against the `AudioSystem`, and a `Shell` hears about every visible change. No clock of its own:
 //! every entry point takes `now`, so tests drive time by hand.
 
+mod activity;
 mod command;
 mod exec;
 mod rebind;
@@ -17,7 +18,8 @@ use std::time::{Duration, Instant};
 use log::debug;
 use serde::Serialize;
 use usher_core::{
-    Command, PanelState, PausedReason, PerRole, Runtime, Snapshot, State, Timestamp, panel_state,
+    Command, Entry, PanelState, PausedReason, PerRole, Runtime, Snapshot, State, Timestamp,
+    Trigger, panel_state,
 };
 use usher_coreaudio::{AudioEvent, AudioSystem, Notify};
 
@@ -44,6 +46,7 @@ pub trait Shell {
     fn auto_switch_changed(&self, on: bool);
     fn paused(&self, reason: &PausedReason);
     fn debug_changed(&self, on: bool);
+    fn activity(&self, entry: &Entry);
 }
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
@@ -82,6 +85,8 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     seed_pending: bool,
     errors: PerRole<Option<String>>,
     reconcile_due: Option<Instant>,
+    /// What woke the pending reconcile (merged); kept through a USB deferral and a scan retry.
+    trigger: Option<Trigger>,
     usb_due: Option<Instant>,
     /// A recheck ran since the last device event: do not schedule another.
     usb_rechecked: bool,
@@ -115,6 +120,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             seed_pending,
             errors: PerRole::default(),
             reconcile_due: None,
+            trigger: Some(Trigger::Launch),
             usb_due: None,
             usb_rechecked: false,
             notify,
@@ -219,7 +225,8 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         self.shell.state_changed(&self.view());
     }
 
-    fn schedule_reconcile(&mut self, now: Instant) {
+    fn schedule_reconcile(&mut self, now: Instant, trigger: Trigger) {
+        self.trigger = Some(self.trigger.map_or(trigger, |t| t.merge(trigger)));
         if self.rebind_due.is_some() {
             return;
         }
@@ -243,6 +250,10 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         if ev == AudioEvent::DevicesChanged {
             self.usb_rechecked = false;
         }
-        self.schedule_reconcile(now);
+        let trigger = match ev {
+            AudioEvent::DefaultChanged(r) => Trigger::DefaultChanged(r),
+            _ => Trigger::DevicesChanged,
+        };
+        self.schedule_reconcile(now, trigger);
     }
 }

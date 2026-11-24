@@ -8,9 +8,10 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use log::{error, warn};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::{NotificationExt, PermissionState};
-use usher_core::{PausedReason, Timestamp};
+use usher_core::{Entry, PausedReason, Timestamp};
 use usher_coreaudio::{CoreAudioSystem, Notify};
 
+use crate::activity::{ActivityLog, LABEL};
 use crate::engine::{Clock, Engine, Event, PanelView, Shell, run};
 use crate::store::Store;
 use crate::{logging, tray};
@@ -71,6 +72,23 @@ impl Shell for TauriShell {
 
     fn debug_changed(&self, on: bool) {
         logging::apply(on);
+    }
+
+    fn activity(&self, entry: &Entry) {
+        let wall = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as u64);
+        let Some(log) = self.0.try_state::<ActivityLog>() else {
+            return;
+        };
+        let line = log
+            .0
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .push(wall, entry);
+        if let Err(e) = self.0.emit_to(LABEL, "activity", &line) {
+            warn!("activity emit failed ({e})");
+        }
     }
 
     fn paused(&self, reason: &PausedReason) {

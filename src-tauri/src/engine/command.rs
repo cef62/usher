@@ -5,7 +5,7 @@ use std::sync::mpsc::Sender;
 use std::time::Instant;
 
 use log::{info, warn};
-use usher_core::{Command, CommandError, DeviceKey, PerRole, apply};
+use usher_core::{Command, CommandError, DeviceKey, Entry, PerRole, Trigger, apply};
 use usher_coreaudio::AudioSystem;
 
 use super::{Engine, Shell};
@@ -62,7 +62,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 self.store.mark_dirty(now);
                 self.announce((was_on, was_debug, was_check), forgot);
                 self.emit();
-                self.schedule_reconcile(now);
+                self.schedule_reconcile(now, Trigger::Command);
                 Ok(())
             }
             Ok(false) => Ok(()),
@@ -81,7 +81,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             let on = self.state.auto_switch;
             info!("auto-switch {}", word(on));
             self.shell.auto_switch_changed(on);
-            if !on {
+            if on {
+                self.record(&Entry::Resumed);
+            } else {
                 self.errors = PerRole::default();
             }
         }

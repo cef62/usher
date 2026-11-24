@@ -4,6 +4,7 @@
 use std::time::{Duration, Instant};
 
 use log::{debug, info, warn};
+use usher_core::Trigger;
 use usher_coreaudio::AudioSystem;
 
 use super::{Engine, Shell};
@@ -32,6 +33,10 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         self.rebind_attempt = 0;
         self.restarted = true;
         self.rebind_due = Some(now);
+        self.trigger = Some(
+            self.trigger
+                .map_or(Trigger::Rebind, |t| t.merge(Trigger::Rebind)),
+        );
         self.reconcile_due = None;
         // devices may have changed during the restart; the post-rebind scan may schedule a fresh recheck
         self.usb_due = None;
