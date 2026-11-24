@@ -299,9 +299,9 @@ The first M8 task settles what the spike could not verify, before any M8 code:
 
 - **0011 v2 scope**: lifts the v1 non-goals for switch notices and history, a diagnostics UI, volume and mute,
   and Bluetooth connect and battery; records the non-goals that stay.
-- **0013 Level listeners** (with M7): amends ADR 0006's listener and `AudioObjectID` rule as §6.2 says.
 - **0012 Bluetooth**: `system_profiler` for battery and paired state, IOBluetooth for connect in
   `usher-coreaudio` (its `unsafe` scope widens to IOBluetooth), the permission and re-prompt trade-off.
+- **0013 Level listeners** (with M7): amends ADR 0006's listener and `AudioObjectID` rule as §6.2 says.
 
 ## 10. Testing
 
