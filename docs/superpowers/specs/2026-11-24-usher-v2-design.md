@@ -217,7 +217,8 @@ Vendor and product are the names already in the UID; no new IOKit reads (call).
   no store write, no reconcile.
 - Gating as for commands: refused `NotReady` before the first scan and `Rebinding` during a rebind; a new
   `Refusal::Stale` when `key` is no longer the role's default, checked by a **live read** of the role's
-  default device in the handler (the last scan can lag a `DefaultChanged` by the 150 ms window), so a drag never moves the volume of a device
+  default device in the handler (the last scan can lag a `DefaultChanged` by the 150 ms window; a failed
+  read counts as `Stale`), so a drag never moves the volume of a device
   that just stopped being active.
 - A failed write logs a `warn`, re-reads the role's levels (the slider snaps back to the real value) and shows
   `Couldn't set volume: <error>` (or mute) under that role's strip until the next successful change.
