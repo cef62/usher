@@ -2,4 +2,4 @@
 "usher": minor
 ---
 
-Added an Activity window that lists what usher did this session and copies diagnostics for bug reports.
+Added a notification when usher switches your output or input device (on by default, with a setting to turn it off), an Activity window with this session's history, and diagnostics you can copy into a public bug report.

@@ -12,10 +12,11 @@ const toc = [
   ['usb', 'USB devices that change ports'],
   ['settings', 'Settings'],
   ['updates', 'Updates'],
+  ['activity', 'Activity and notices'],
   ['logs', 'Logs and troubleshooting'],
 ];
 const keys = [
-  ['Tab', 'Move focus: the Auto-switch switch, the Output list, the Input list, then the footer buttons (Update to usher …, when one is waiting, Settings…, Quit). Inside a list, ↑ and ↓ move between rows; a ranked row and its … button share one stop.'],
+  ['Tab', 'Move focus: the Auto-switch switch, the Output list, the Input list, then the footer buttons (Update to usher …, when one is waiting, Activity…, Settings…, Quit). Inside a list, ↑ and ↓ move between rows; a ranked row and its … button share one stop.'],
   ['↑ ↓', 'Move focus to the previous or next row.'],
   ['Alt+↑ Alt+↓', 'Move the focused row up or down. Focus stays on it.'],
   ['Return', 'Move the focused row to the top.'],
@@ -59,9 +60,9 @@ const keys = [
         <ul>
           <li>Left-click the menu-bar icon to open the panel.</li>
           <li>Click outside the panel, press <kbd>Esc</kbd>, or click the icon again to close it.</li>
-          <li>Right-click the icon for a menu with <strong>Auto-switch</strong>, <strong>Settings…</strong>, <strong>Check for Updates…</strong> and <strong>Quit usher</strong>.</li>
+          <li>Right-click the icon for a menu with <strong>Auto-switch</strong>, <strong>Activity…</strong>, <strong>Settings…</strong>, <strong>Check for Updates…</strong> and <strong>Quit usher</strong>.</li>
         </ul>
-        <Shot name="panel" alt="The usher panel: the Auto-switch switch, an Output list of five devices and an Input list of four, then Settings… and Quit." caption="The panel." narrow />
+        <Shot name="panel" alt="The usher panel: the Auto-switch switch, an Output list of five devices and an Input list of four, then Activity…, Settings… and Quit." caption="The panel." narrow />
         <p>The panel has two lists, <strong>Output</strong> and <strong>Input</strong>. A device that has both, such as a headset, shows in both, with its own rank in each. Each row shows:</p>
         <ul>
           <li>its rank number;</li>
@@ -71,7 +72,7 @@ const keys = [
           <li>a <strong>never use</strong> tag, with the name struck through, on a device you stopped usher from using;</li>
           <li>“last seen 2 d” (or min, h) on a disconnected device.</li>
         </ul>
-        <p>The footer has <strong>Settings…</strong> and <strong>Quit</strong>. It also shows a <strong>Debug</strong> tag while Debug logging is on, and <strong>Update to usher X…</strong> when an update waits.</p>
+        <p>The footer has <strong>Activity…</strong>, <strong>Settings…</strong> and <strong>Quit</strong>. It also shows a <strong>Debug</strong> tag while Debug logging is on, and <strong>Update to usher X…</strong> when an update waits.</p>
         <p>New devices go to the bottom of the list. On first launch, usher puts the device macOS uses now at the top, so it never switches your audio just because it started.</p>
       </section>
 
@@ -140,11 +141,13 @@ const keys = [
       <section id="settings">
         <h2>Settings</h2>
         <p>Open it with <strong>Settings…</strong> in the panel or in the right-click menu. Changes apply at once.</p>
-        <Shot name="settings" alt="The usher Settings window: Open at login, Check for updates daily with Check now, Debug logging with Show log in Finder, and the version. An update is waiting: the Updates group shows “usher 0.1.3 is available.” and a What's new… button." caption="Settings." narrow />
+        <Shot name="settings" alt="The usher Settings window: Open at login, Notify when usher switches, Check for updates daily with Check now, Debug logging with Open Activity… and Show log in Finder, and the version. An update is waiting: the Updates group shows “usher 0.1.3 is available.” and a What's new… button." caption="Settings." narrow />
         <ul>
           <li><strong>Open at login:</strong> start usher when you log in. If macOS lists usher as not allowed in System Settings › General › Login Items, allow it there. A development build refuses this change.</li>
           <li><strong>Check for updates daily:</strong> look for updates by itself. <strong>Check now</strong> checks at once.</li>
+          <li><strong>Notify when usher switches:</strong> show a notification when usher changes your output or input. On by default. See <a href="#activity">Activity and notices</a>.</li>
           <li><strong>Debug logging:</strong> add detail to the log. The panel shows a <strong>Debug</strong> tag while it is on.</li>
+          <li><strong>Open Activity…</strong> opens the Activity window.</li>
           <li><strong>Show log in Finder:</strong> select <code>usher.log</code> in Finder (or open its folder when there is no log yet).</li>
           <li><strong>Version</strong> at the bottom.</li>
         </ul>
@@ -166,9 +169,33 @@ const keys = [
         </ul>
       </section>
 
+      <section id="activity">
+        <h2>Activity and notices</h2>
+        <h3>Notices</h3>
+        <ul>
+          <li>When usher switches your output or input by itself, macOS shows a notification titled “usher”, such as “Output: Studio Display Speakers → AirPods Pro”.</li>
+          <li>usher shows one when a device connects or disconnects and the default changes, when another app takes a device and usher puts it back, and when a switch fails.</li>
+          <li>usher never shows one for a change you make in usher (a reorder, a click, Never use), nor for the switch it makes at launch or after the audio system restarts.</li>
+          <li>It shows at most one notice per output and per input in 10 seconds, so a headset that connects and drops over and over does not flood you. The history keeps every change.</li>
+          <li>Turn them off with <strong>Notify when usher switches</strong> in Settings. The history still fills. The loop guard notification above always shows.</li>
+          <li>macOS asks for permission the first time. If you refuse, usher shows no notice and logs “notifications are not allowed; notice not shown”.</li>
+        </ul>
+        <h3>The Activity window</h3>
+        <p>Open it with <strong>Activity…</strong> in the panel footer or the right-click menu, or <strong>Open Activity…</strong> in Settings.</p>
+        <Shot name="activity" alt="The usher Activity window: a History list with four lines, such as “Output: Studio Display Speakers → AirPods Pro · AirPods Pro connected”, and a Diagnostics section with a redacted report and the Refresh and Copy diagnostics buttons." caption="The Activity window." narrow />
+        <ul>
+          <li><strong>History</strong> lists what usher did, newest first, each line with its time and the reason, such as “AirPods Pro connected”, “AirPods Pro disconnected”, “changed in usher” or “usher started”. A switch that failed reads “Couldn't switch output to <em>device</em>: …”, and turning Auto-switch back on reads “Auto-switch on”.</li>
+          <li>It keeps the last 200 lines, for this session only. Quit usher and it starts empty. The log file keeps the rest: each line is in it, starting with “activity:”.</li>
+          <li><strong>Diagnostics</strong> opens a report: usher and macOS versions, both ranked lists with the device each role wants and has, and the devices in the last scan. <strong>Refresh</strong> reads it again.</li>
+          <li><strong>Copy diagnostics</strong> puts exactly the text you see on the clipboard, ready to paste into a GitHub issue.</li>
+        </ul>
+        <p class="note">The report is made for public issues. It leaves out your name (any word of your account's names in a device name, such as “AirPods Pro di Ada”), full Bluetooth addresses (only the last two bytes show), USB serial numbers (they show as <code>&lt;serial&gt;</code>), and any other device id it does not know, which shows as <code>uid#1</code>, <code>uid#2</code> and so on. Your home folder shows as <code>~</code>. Read the text before you post it: a device you renamed to a private name stays as it is.</p>
+      </section>
+
       <section id="logs">
         <h2>Logs and troubleshooting</h2>
         <ul>
+          <li>Reporting a bug? Open the Activity window and use <strong>Copy diagnostics</strong>, then paste it into the issue.</li>
           <li>The log is <code>~/Library/Logs/com.cef62.usher/usher.log</code>. It stays on your Mac. It rotates at 1 MB and keeps 5 files. Open it with <strong>Show log in Finder</strong> in Settings.</li>
           <li>It has one line for each event that matters: each time usher sets a default device, loop guard trips, forgets, update checks and Auto-switch toggles. Device names appear as macOS reports them.</li>
           <li>Turn on <strong>Debug logging</strong> in Settings for more detail, with no restart. Turn it off again when done. Running from a terminal with <code>USHER_LOG=debug</code> does the same.</li>

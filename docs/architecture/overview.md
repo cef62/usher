@@ -22,6 +22,7 @@ flowchart LR
     GUARD[LoopGuard]
     ID[Identity + alias registry]
     ST[State serde]
+    ACTV[explain / diagnostics]
   end
 
   subgraph app["src-tauri (usher)"]
@@ -31,6 +32,7 @@ flowchart LR
     PW[Panel window]
     SL[Settings + Login]
     UPD[Updater + WhatsNew]
+    ACT[Activity window + log]
   end
 
   subgraph ui["src/ (React)"]
@@ -46,6 +48,8 @@ flowchart LR
   ENG --> POL
   POL --> GUARD
   POL --> ID
+  ENG --> ACTV
+  ENG -- activity lines, notices --> ACT
   ENG --> STORE
   STORE --> ST
   ENG -- state-changed --> PANEL
