@@ -10,6 +10,7 @@
 //! (de)serialise it.
 #![forbid(unsafe_code)]
 
+mod activity;
 mod commands;
 mod desired;
 mod guard;
@@ -21,6 +22,7 @@ mod reconcile;
 mod remember;
 mod seed;
 mod state;
+pub use activity::*;
 pub use commands::*;
 pub use desired::*;
 pub use guard::*;
