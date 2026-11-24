@@ -45,6 +45,8 @@ jobs:
 
       - run: pnpm check:size
 
+      - run: pnpm docs:build
+
       - run: cargo fmt --all --check
 
       - run: cargo clippy --workspace --all-targets -- -D warnings
