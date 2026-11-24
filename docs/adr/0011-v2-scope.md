@@ -53,6 +53,7 @@ M6 departs from the spec text in three places (plan `2026-11-24-usher-m6-activit
   window shows the redacted text Copy puts on the clipboard.
   The spec §5.2 line "notifications are not allowed" cannot be observed: the notification plugin on
   desktop always reports permission as granted, so the line is never logged.
+- Quiet period (owner request): no notice for 10 s after launch and after a rebind completes, because devices settle then (a slow display or headset connecting at login). History and log are unchanged; Paused still notifies.
 
 ## Consequences
 

@@ -76,6 +76,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 info!("rebound after {} attempt(s)", n + 1);
             }
             self.rebind_attempt = 0;
+            if self.restarted {
+                self.notices.quiet_from(self.clock.wall(now));
+            }
             self.restarted = false;
             return;
         }

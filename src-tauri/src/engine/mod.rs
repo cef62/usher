@@ -137,6 +137,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             rebind_attempt: 0,
             restarted: false,
         };
+        e.notices.quiet_from(e.clock.wall(now));
         e.attempt_bind(now);
         e.shell.auto_switch_changed(e.state.auto_switch);
         e.emit();

@@ -260,8 +260,8 @@ fn a_connect_notifies_once_for_both_roles() {
     let fake = world(vec![spk(), mic()], SPK);
     let (mut e, rec) = boot(fake.clone(), d.path());
     fake.world().devices.push(pods());
-    dev_event(&mut e, AudioEvent::DevicesChanged, 100);
-    e.tick(at(300));
+    dev_event(&mut e, AudioEvent::DevicesChanged, 10_100);
+    e.tick(at(10_300));
     assert_eq!(
         rec.notices(),
         vec!["Output: MacBook Pro Speakers → AirPods\nInput: MacBook Pro Microphone → AirPods"]
@@ -308,11 +308,56 @@ fn notices_are_capped_per_role() {
     state_file(d.path(), &ranked(&[SPK, PODS]));
     let fake = world(vec![spk(), pods(), mic()], SPK);
     let (mut e, rec) = boot(fake.clone(), d.path());
-    for t in [200, 5_000, 11_000] {
+    for t in [10_200, 15_000, 21_000] {
         correct(&mut e, &fake, t);
     }
     assert_eq!(rec.notices().len(), 2);
     assert_eq!(rec.entries().len(), 3);
+}
+
+fn quiet_world(d: &std::path::Path) -> (Engine, Recorder, Fake) {
+    state_file(d, &ranked(&[SPK, PODS]));
+    let fake = world(vec![spk(), pods(), mic()], SPK);
+    let (e, rec) = boot(fake.clone(), d);
+    (e, rec, fake)
+}
+
+#[test]
+fn no_notice_in_the_first_10_s_after_launch() {
+    let d = tempfile::tempdir().unwrap();
+    let (mut e, rec, fake) = quiet_world(d.path());
+    correct(&mut e, &fake, 5_000);
+    assert_eq!(rec.entries().len(), 1, "history still gets the entry");
+    assert!(rec.notices().is_empty());
+    correct(&mut e, &fake, 11_000);
+    assert_eq!(rec.notices().len(), 1);
+}
+
+#[test]
+fn no_notice_in_the_first_10_s_after_a_rebind() {
+    let d = tempfile::tempdir().unwrap();
+    let (mut e, rec, fake) = quiet_world(d.path());
+    dev_event(&mut e, AudioEvent::ServiceRestarted, 20_000);
+    e.tick(at(21_200));
+    correct(&mut e, &fake, 26_200);
+    assert!(rec.notices().is_empty());
+    assert_eq!(rec.entries().len(), 1, "history still gets the entry");
+    correct(&mut e, &fake, 32_000);
+    assert_eq!(rec.notices().len(), 1);
+}
+
+#[test]
+fn paused_inside_the_quiet_period_still_notifies() {
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[SPK, PODS]));
+    let fake = world(vec![spk(), pods(), mic()], PODS);
+    fake.world().sticky.output = Some(PODS.into());
+    let (mut e, rec) = boot(fake, d.path());
+    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 200);
+    e.tick(at(350));
+    dev_event(&mut e, AudioEvent::DefaultChanged(Role::Output), 500);
+    e.tick(at(650));
+    assert!(rec.calls().iter().any(|c| matches!(c, Call::Paused(_))));
 }
 
 #[test]
@@ -362,8 +407,8 @@ fn a_failed_switch_notifies() {
     let (mut e, rec) = boot(fake.clone(), d.path());
     fake.world().devices.push(pods());
     fail_pods(&fake);
-    dev_event(&mut e, AudioEvent::DevicesChanged, 100);
-    e.tick(at(300));
+    dev_event(&mut e, AudioEvent::DevicesChanged, 10_100);
+    e.tick(at(10_300));
     assert_eq!(
         rec.notices(),
         vec!["Couldn't switch output to AirPods: set default failed (OSStatus -50)"]

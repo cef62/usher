@@ -209,16 +209,24 @@ pub fn explain(
 }
 
 pub const NOTICE_GAP_MS: u64 = 10_000;
+/// No notices this long after launch or a rebind: devices settle then (owner request).
+pub const QUIET_MS: u64 = 10_000;
 
-/// Caps notices at one line per role per [`NOTICE_GAP_MS`]; a capped line stays in history.
+/// Caps notices at one line per role per [`NOTICE_GAP_MS`] and mutes them for [`QUIET_MS`] after
+/// [`NoticeGate::quiet_from`]; a capped or muted line stays in history.
 #[derive(Default, Debug)]
 pub struct NoticeGate {
     last: PerRole<Option<Timestamp>>,
+    quiet_from: Option<Timestamp>,
 }
 
 impl NoticeGate {
+    pub fn quiet_from(&mut self, t: Timestamp) {
+        self.quiet_from = Some(t);
+    }
+
     pub fn body(&mut self, trigger: Trigger, entries: &[Entry], now: Timestamp) -> Option<String> {
-        if !trigger.notifies() {
+        if !trigger.notifies() || self.quiet_from.is_some_and(|t| now.since(t) < QUIET_MS) {
             return None;
         }
         let mut lines = Vec::new();
