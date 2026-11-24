@@ -14,11 +14,13 @@ Run before every commit that finishes a task and before opening a PR. Report the
 
 | # | Check | How |
 |---|---|---|
-| 1 | Verify | `pnpm build`, `pnpm test`, `pnpm check:size`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check` all green; new logic has a test |
+| 1 | Verify | `pnpm build`, `pnpm test`, `pnpm check:size`, `pnpm docs:build`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check` all green; new logic has a test |
 | 2 | App build | when `src-tauri/`, `crates/` or `tauri.conf.json` changed: `pnpm build:app` (or at least `cargo build --release`) |
 | 3 | Docs | README reflects new behaviour, settings and shortcuts; comments explain why, not what |
 | 4 | Staleness | no orphaned files, no unused dependencies in `package.json` or `Cargo.toml`, no docs pointing at removed code |
 | 5 | Capabilities | every file in `src-tauri/capabilities/` grants exactly what its window uses |
+
+The docs site (`site/`: its own pages, plus `CHANGELOG.md`; keep its Usage page in step with `README.md`) runs with `pnpm site:dev`; `pnpm docs:build && pnpm site:preview` serves the production build at http://localhost:4321/usher/. Pages deploys from `main` through `.github/workflows/pages.yml`. Screenshots in `site/src/assets/screens/` are regenerated with `site/scripts/screens/capture.mjs` (see its README) when the UI changes. The site is not part of the app: a site-only change needs no changeset.
 
 Dev and installed builds share the identifier and lock on macOS: quit the installed usher before `pnpm tauri dev`.
 
