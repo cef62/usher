@@ -327,3 +327,35 @@ fn usb_plugged_after_launch_gets_its_rescan() {
     e.tick(at(3_000));
     assert_eq!(fake.world().scans, 3);
 }
+
+#[test]
+fn a_failed_recheck_scan_at_launch_retries_and_seeds() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    fake.world().usb_unresolved = true;
+    let (mut e, _) = boot(fake.clone(), d.path());
+    fake.world().fail_scan = 1;
+    e.tick(at(500));
+    assert_eq!(e.saves(), 0);
+    assert_eq!(e.next_due(), Some(at(1_500)));
+    e.tick(at(1_500));
+    assert_eq!(e.saves(), 1);
+}
+
+#[test]
+fn a_failed_recheck_scan_after_a_restart_retries_and_switches_back() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    state_file(d.path(), &ranked(&["AirPods-uid", "BuiltInSpeakerDevice"]));
+    fake.world().current.output = Some("AirPods-uid".into());
+    let (mut e, _) = boot(fake.clone(), d.path());
+    fake.world().current.output = Some("BuiltInSpeakerDevice".into());
+    fake.world().usb_unresolved = true;
+    e.handle(Event::Audio(AudioEvent::ServiceRestarted), at(1_000));
+    e.tick(at(1_000));
+    fake.world().fail_scan = 1;
+    e.tick(at(1_500));
+    assert!(fake.world().sets.is_empty());
+    e.tick(at(2_500));
+    assert_eq!(fake.world().sets.len(), 1);
+}

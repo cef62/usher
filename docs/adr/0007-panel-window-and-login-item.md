@@ -82,7 +82,7 @@ These rulings changed behaviour relative to the plan.
 
 - No new `unsafe` and no new dependency for the window or the login item.
 - The panel may not show over a full-screen app's Space (`docs/qa.md` row 20). Upgrade path: move
-  the window level call into a crate allowed `unsafe`, with a new ADR.
+  the window level call into a crate allowed `unsafe`, with a new ADR. Owner check on 2026-11-24 (0.1.2): the panel shows over full-screen apps.
 - Settings cannot show an "awaiting approval" state. The hint is static.
 - Mixed-DPI placement and the row menu with a real mouse are proven only by hand (`docs/qa.md`
   rows 12 and 23 to 25).
