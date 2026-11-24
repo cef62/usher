@@ -48,7 +48,7 @@ pub fn open(app: &AppHandle) {
         .build();
     match built {
         Ok(w) => {
-            crate::panel::glass(&w, crate::panel::WINDOW_RADIUS);
+            crate::glass::apply(&w, crate::glass::WINDOW_RADIUS);
             w.set_focus().ok();
         }
         Err(e) => warn!("could not open Settings ({e})"),

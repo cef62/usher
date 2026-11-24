@@ -49,7 +49,7 @@ pub fn open(app: &AppHandle) {
         .build();
     match built {
         Ok(w) => {
-            crate::panel::glass(&w, crate::panel::WINDOW_RADIUS);
+            crate::glass::apply(&w, crate::glass::WINDOW_RADIUS);
             w.set_focus().ok();
         }
         Err(e) => log::warn!("could not open What's new ({e})"),
@@ -132,7 +132,11 @@ mod tests {
         assert_eq!(cap["windows"], serde_json::json!([LABEL]));
         assert_eq!(
             cap["permissions"],
-            serde_json::json!(["log:default", "core:window:allow-start-dragging"])
+            serde_json::json!([
+                "log:default",
+                "core:window:allow-start-dragging",
+                "core:window:allow-internal-toggle-maximize"
+            ])
         );
     }
 }

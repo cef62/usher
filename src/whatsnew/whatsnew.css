@@ -13,6 +13,8 @@ body,
 
 main {
   overflow-y: auto;
+  /* scrolled notes fade out under the title strip instead of a hard edge */
+  mask-image: linear-gradient(to bottom, transparent, #000 12px);
 }
 
 .hero {
