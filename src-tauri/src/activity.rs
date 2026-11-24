@@ -134,11 +134,13 @@ pub fn open(app: &AppHandle) {
         .then(|| app.config().build.dev_url.clone())
         .flatten();
     let built = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("activity.html".into()))
-        .title("usher activity")
+        .title("usher Activity")
         .transparent(true) // the page draws over Liquid Glass, like the panel
         .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .inner_size(460.0, 560.0)
-        .min_inner_size(380.0, 320.0)
+        .inner_size(480.0, 560.0)
+        .min_inner_size(360.0, 320.0)
+        .minimizable(false)
+        .maximizable(false)
         .center()
         .on_navigation(move |u| crate::whatsnew::own_page(u, dev.as_ref()))
         .on_new_window(|_, _| NewWindowResponse::Deny)
