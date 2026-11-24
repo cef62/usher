@@ -17,6 +17,7 @@ export default defineConfig(() => ({
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
         settings: fileURLToPath(new URL("./settings.html", import.meta.url)),
         whatsnew: fileURLToPath(new URL("./whatsnew.html", import.meta.url)),
+        activity: fileURLToPath(new URL("./activity.html", import.meta.url)),
       },
     },
   },

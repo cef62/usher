@@ -100,7 +100,7 @@ test("a refused command shows its text and the rows go back to the engine's orde
     const [error, setError] = useState<string | null>(null);
     const actions = {
       send: async () => { setError("the output list changed; reload and retry"); return false; },
-      hide() {}, openSettings() {}, openWhatsNew() {}, quit() {},
+      hide() {}, openSettings() {}, openWhatsNew() {}, openActivity() {}, quit() {},
     };
     return <PanelView view={view} error={error} now={now} actions={actions} />;
   };

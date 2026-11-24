@@ -70,6 +70,7 @@ export function SettingsPage({ initial, api }: { initial: SettingsView; api: typ
         </label>
         <p className="row note">Adds detail to the log. The panel shows a Debug badge while it is on.</p>
         <div className="row end">
+          <button type="button" onClick={() => run(api.openActivity)}>Open Activity…</button>
           <button type="button" onClick={() => run(api.revealLog)}>Show log in Finder</button>
         </div>
       </div>

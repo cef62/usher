@@ -19,6 +19,7 @@ const api: typeof settingsApi = {
   setNotify: async (on) => void calls.push(["setNotify", on]),
   checkNow: () => checkResult(),
   openWhatsNew: async () => void calls.push(["openWhatsNew"]),
+  openActivity: async () => void calls.push(["openActivity"]),
   fit: async () => {},
   revealLog: async () => void calls.push(["revealLog"]),
   onUpdate: async (cb) => ((pushUpdate = cb), () => {}),
@@ -131,4 +132,10 @@ test("a pushed update replaces an earlier check failure", async () => {
   await act(async () => click(button(root, "Check now")));
   await act(async () => pushUpdate("0.2.0"));
   expect(status(root)).toBe("usher 0.2.0 is available.");
+});
+
+test("opens Activity from Troubleshooting", async () => {
+  const { root } = mount(<SettingsPage initial={view()} api={api} />);
+  await act(async () => click(button(root, "Open Activity…")));
+  expect(calls).toEqual([["openActivity"]]);
 });

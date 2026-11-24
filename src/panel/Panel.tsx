@@ -59,6 +59,7 @@ export function Panel() {
     send: send(setError),
     hide: () => void panelApi.hide(),
     openSettings: () => void panelApi.openSettings(),
+    openActivity: () => void panelApi.openActivity(),
     openWhatsNew: () => void panelApi.openWhatsNew(),
     quit: () => void panelApi.quit(),
   };

@@ -23,7 +23,8 @@ const v = (p: Partial<View> = {}): View => ({
 });
 let sent: Command[] = [];
 let opened = 0;
-const a: Actions = { send: async (c) => (sent.push(c), true), hide: () => {}, openSettings: () => {}, openWhatsNew: () => void (opened += 1), quit: () => {} };
+let activityOpened = 0;
+const a: Actions = { send: async (c) => (sent.push(c), true), hide: () => {}, openSettings: () => {}, openWhatsNew: () => void (opened += 1), openActivity: () => void (activityOpened += 1), quit: () => {} };
 const ui = (view: View | null, error: string | null = null) => <PanelView view={view} error={error} now={now} actions={a} />;
 
 const rowButton = (r: Element, name: string) =>
@@ -32,8 +33,15 @@ const menuButton = (r: Element, name: string) => r.querySelector<HTMLElement>(`b
 const menuItem = (r: Element, text: string) => [...r.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((b) => b.textContent === text) ?? null;
 const button = (r: Element, text: string) => [...r.querySelectorAll("button")].find((b) => b.textContent === text)!;
 
-beforeEach(() => { sent = []; opened = 0; });
+beforeEach(() => { sent = []; opened = 0; activityOpened = 0; });
 afterEach(() => { document.body.innerHTML = ""; });
+
+test("footer order", () => {
+  const { root } = mount(ui(v({ update: "0.2.0" })));
+  expect([...root.querySelectorAll("footer > button")].map((b) => b.textContent)).toEqual(["Update to usher 0.2.0…", "Activity…", "Settings…", "Quit"]);
+  click(button(root, "Activity…"));
+  expect(activityOpened).toBe(1);
+});
 
 test("paused banner shows the M2 copy only while paused", () => {
   const { root, rerender } = mount(ui(v({ paused: { role: "output", key: "AirPods-uid", name: "AirPods" } })));
