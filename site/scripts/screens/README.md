@@ -1,0 +1,1 @@
+Regenerate the site screenshots: run `pnpm dev` at the repo root (port 1420, or set `USHER_URL`), then `node site/scripts/screens/capture.mjs` with `playwright-core` (WebKit installed) resolvable, or point `PLAYWRIGHT_FROM` at a file inside a `node_modules` that has it. `mock.js` fakes the Tauri backend with made-up devices. Do not add Playwright to usher's dependencies.

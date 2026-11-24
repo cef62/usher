@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import Shot from '../components/Shot.astro';
+import icon from '../../../src-tauri/icons/icon.png';
+import { getDownload } from '../lib/release';
+
+const dl = await getDownload();
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const steps = [
+  { title: '1. Rank your devices', text: 'Open the panel from the menu bar. Drag your output and input devices into the order you prefer.' },
+  { title: '2. Plug in', text: 'Connect AirPods, a USB interface or a display. Disconnected devices stay in the list.' },
+  { title: '3. usher switches', text: 'usher keeps the default output and input on the highest-ranked device that is connected.' },
+];
+---
+
+<Base title="usher — keep your preferred audio device active on macOS">
+  <section class="hero">
+    <img class="app-icon" src={icon.src} width="96" height="96" alt="" />
+    <h1>usher</h1>
+    <p class="lede">A menu-bar app that keeps your Mac's output and input on the highest-ranked audio device that is connected.</p>
+    <p>
+      <a class="button" href={dl.dmg}>Download for macOS{dl.version ? ` (v${dl.version})` : ''}</a>
+    </p>
+    <p class="muted">
+      Apple silicon only. usher is not signed with an Apple Developer ID, so macOS blocks the first launch:{" "}
+      <a href={`${base}/usage/#install`}>install steps and the Gatekeeper workaround</a>.
+    </p>
+  </section>
+
+  <Shot name="panel" alt="The usher panel: the Auto-switch switch, an Output list of five devices and an Input list of four." narrow priority />
+
+  <h2 class="how">How it works</h2>
+  <ul class="cards">
+    {steps.map((s) => (
+      <li>
+        <h3>{s.title}</h3>
+        <p>{s.text}</p>
+      </li>
+    ))}
+  </ul>
+  <p class="muted more"><a href={`${base}/usage/`}>Read the usage guide</a>.</p>
+</Base>

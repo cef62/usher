@@ -2,6 +2,8 @@
 
 usher is a macOS menu-bar app. It keeps the default output and input audio devices on your preferred device: the highest-ranked device in a priority list that is currently connected.
 
+Docs: <https://cef62.github.io/usher>
+
 ## Install
 
 1. Download `usher_<version>_aarch64.dmg` from the [latest release](https://github.com/cef62/usher/releases/latest).
@@ -28,4 +30,4 @@ Logs: `~/Library/Logs/com.cef62.usher/usher.log`; `USHER_LOG=debug` adds detail.
 
 ## Using usher
 
-Left-click the menu-bar icon to open the panel. It lists output and input devices in priority order. Drag a row, or focus it and press Alt+Up or Alt+Down, to reorder. Return promotes a row to the top. The `…` menu on each row moves it, stops it being used, or forgets a disconnected device. Right-click the icon for Auto-switch, Settings… and Quit. Settings has Open at login, Debug logging and Show log in Finder.
+Left-click the menu-bar icon to open the panel. It lists output and input devices in priority order. Drag a row, or focus it and press Alt+Up or Alt+Down, to reorder. Return promotes a row to the top. The `…` menu on each row moves it, stops it being used, or forgets a disconnected device. Right-click the icon for Auto-switch, Settings…, Check for Updates… and Quit usher. Settings has Open at login, Debug logging and Show log in Finder. If usher has to correct the output (or the input) 3 times in 10 seconds, it turns Auto-switch off and the panel says `usher paused auto-switch: <device> kept taking <role>`; turn Auto-switch back on to resume. A device you forget is removed from both lists.

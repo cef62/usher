@@ -100,6 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -120,3 +121,6 @@ jobs:
           gh release download "$TAG" -p latest.json -O latest.json
           node scripts/check-feed.mjs latest.json src-tauri/tauri.conf.json "${TAG#v}"
           gh release edit "$TAG" --draft=false
+          # the docs site's download button reads the latest release at build time; a release published with
+          # GITHUB_TOKEN fires no release event, so rebuild the site explicitly
+          gh workflow run pages.yml --ref main || echo "docs site rebuild not started"

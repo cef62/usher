@@ -39,3 +39,4 @@ What gets easier, what gets harder, what we must now do.
 | [0007](0007-panel-window-and-login-item.md) | Panel window, login item and command replies | Accepted |
 | [0008](0008-updater-settings-and-release-guard.md) | Updater setting, release guard and install restart | Accepted |
 | [0009](0009-reconcile-waits-for-usb-verdicts.md) | Reconcile waits for unresolved USB verdicts (amends 0006) | Accepted |
+| [0010](0010-docs-site.md) | A docs site on GitHub Pages (departs from the v1 non-goal) | Accepted |

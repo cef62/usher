@@ -1,0 +1,185 @@
+---
+import Base from '../layouts/Base.astro';
+import Shot from '../components/Shot.astro';
+
+// Keep in step with README.md (the GitHub-facing copy of the same facts).
+const toc = [
+  ['install', 'Install'],
+  ['panel', 'The panel'],
+  ['rank', 'Rank devices'],
+  ['auto-switch', 'Auto-switch'],
+  ['never-use', 'Never use and Forget'],
+  ['usb', 'USB devices that change ports'],
+  ['settings', 'Settings'],
+  ['updates', 'Updates'],
+  ['logs', 'Logs and troubleshooting'],
+];
+const keys = [
+  ['Tab', 'Move focus: the Auto-switch switch, the Output list, the Input list, then the footer buttons (Update to usher …, when one is waiting, Settings…, Quit). Inside a list, ↑ and ↓ move between rows; a ranked row and its … button share one stop.'],
+  ['↑ ↓', 'Move focus to the previous or next row.'],
+  ['Alt+↑ Alt+↓', 'Move the focused row up or down. Focus stays on it.'],
+  ['Return', 'Move the focused row to the top.'],
+  ['Esc', 'Close the panel, or close the open … menu.'],
+];
+---
+
+<Base title="Usage · usher" description="Install usher, rank your audio devices and set Auto-switch, Settings and updates.">
+  <div class="doc">
+    <nav class="toc" aria-label="On this page">
+      <p>On this page</p>
+      <ol>
+        {toc.map(([id, label]) => <li><a href={`#${id}`}>{label}</a></li>)}
+      </ol>
+    </nav>
+
+    <article class="prose">
+      <h1>Usage</h1>
+
+      <section id="install">
+        <h2>Install</h2>
+        <ol>
+          <li>Download <code>usher_&lt;version&gt;_aarch64.dmg</code> from the <a href="https://github.com/cef62/usher/releases/latest">latest release</a>.</li>
+          <li>Open the dmg and drag usher to Applications.</li>
+          <li>Open usher from Applications. macOS blocks the first launch.</li>
+          <li>Allow it once, with either of these:
+            <ul>
+              <li>System Settings › Privacy &amp; Security, then <strong>Open Anyway</strong> next to usher.</li>
+              <li>Or run this, then open usher again:
+                <pre><code>xattr -cr /Applications/usher.app</code></pre>
+              </li>
+            </ul>
+          </li>
+        </ol>
+        <p class="note">usher is not signed with an Apple Developer ID, hence the block. Later versions install from inside usher and need neither step. usher needs an Apple silicon Mac.</p>
+      </section>
+
+      <section id="panel">
+        <h2>The panel</h2>
+        <p>usher lives in the menu bar and has no Dock icon.</p>
+        <ul>
+          <li>Left-click the menu-bar icon to open the panel.</li>
+          <li>Click outside the panel, press <kbd>Esc</kbd>, or click the icon again to close it.</li>
+          <li>Right-click the icon for a menu with <strong>Auto-switch</strong>, <strong>Settings…</strong>, <strong>Check for Updates…</strong> and <strong>Quit usher</strong>.</li>
+        </ul>
+        <Shot name="panel" alt="The usher panel: the Auto-switch switch, an Output list of five devices and an Input list of four, then Settings… and Quit." caption="The panel." narrow />
+        <p>The panel has two lists, <strong>Output</strong> and <strong>Input</strong>. A device that has both, such as a headset, shows in both, with its own rank in each. Each row shows:</p>
+        <ul>
+          <li>its rank number;</li>
+          <li>a filled dot <code>●</code> when the device is connected, an empty dot <code>○</code> when it is not (the row is dimmed);</li>
+          <li>its name;</li>
+          <li>an <strong>active</strong> tag on the device macOS uses now;</li>
+          <li>a <strong>never use</strong> tag, with the name struck through, on a device you stopped usher from using;</li>
+          <li>“last seen 2 d” (or min, h) on a disconnected device.</li>
+        </ul>
+        <p>The footer has <strong>Settings…</strong> and <strong>Quit</strong>. It also shows a <strong>Debug</strong> tag while Debug logging is on, and <strong>Update to usher X…</strong> when an update waits.</p>
+        <p>New devices go to the bottom of the list. On first launch, usher puts the device macOS uses now at the top, so it never switches your audio just because it started.</p>
+      </section>
+
+      <section id="rank">
+        <h2>Rank devices</h2>
+        <p>The list order is the priority. usher uses the highest-ranked connected device.</p>
+        <ul>
+          <li><strong>Drag</strong> a row to a new place.</li>
+          <li><strong>Click</strong> a row, or focus it and press <kbd>Return</kbd>, to move it to the top. This also clears Never use for it.</li>
+          <li><strong>Keyboard:</strong> focus a row, then press <kbd>Alt+↑</kbd> or <kbd>Alt+↓</kbd> to move it.</li>
+          <li><strong>… menu</strong> on a row: <strong>Move up</strong>, <strong>Move down</strong>, <strong>Never use</strong> (or <strong>Use</strong>) and, for a disconnected device, <strong>Forget…</strong>.</li>
+        </ul>
+        <Shot name="panel-menu" alt="The usher panel with the … menu open on the AirPods Pro row: Move up, Move down, Never use and Forget…." caption="The … menu of a disconnected device." narrow />
+        <p>The order is saved at once and kept after a restart. A new order applies at once too: usher switches to the new top device if it is connected. VoiceOver reads each row, such as “AirPods Pro, 3 of 5, disconnected, last seen 2 d”, and announces each move.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Key</th><th scope="col">Does</th></tr></thead>
+            <tbody>
+              {keys.map(([k, d]) => <tr><th scope="row"><kbd>{k}</kbd></th><td>{d}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="auto-switch">
+        <h2>Auto-switch</h2>
+        <ul>
+          <li>With <strong>Auto-switch</strong> on, usher keeps the default output and the default input on the highest-ranked device that is connected. “Keeps the top connected device active.”</li>
+          <li>It also moves system alert sounds to the output device.</li>
+          <li>If you or an app pick another device, usher switches back to the top one. Plug in AirPods that take over the mic, and the mic returns to the one you ranked first.</li>
+          <li>If no ranked device is connected, usher changes nothing.</li>
+          <li>Turn it on or off with the switch in the panel, or with <strong>Auto-switch</strong> in the right-click menu. When it is off, the menu-bar icon gets a slash and its tooltip reads “usher: auto-switch off”.</li>
+        </ul>
+        <h3>The loop guard</h3>
+        <p>Another app can fight usher over a device. usher then stops by itself: if it has to correct the output (or the input) three times in 10 seconds, it turns Auto-switch off.</p>
+        <Shot name="panel-paused" alt="The usher panel with Auto-switch off and the line “usher paused auto-switch: AirPods Pro kept taking output”." caption="After the loop guard trips." narrow />
+        <ul>
+          <li>The panel shows “usher paused auto-switch: AirPods Pro kept taking output” (with your device and role) until you turn Auto-switch back on.</li>
+          <li>macOS also shows a notification with that text. It asks for permission the first time. If you refuse, the panel line and the icon are the only signs.</li>
+          <li>Turn Auto-switch back on to start again. usher then applies the top-ranked device.</li>
+        </ul>
+      </section>
+
+      <section id="never-use">
+        <h2>Never use and Forget</h2>
+        <ul>
+          <li><strong>Never use</strong> (in the … menu) keeps usher from picking that device. The row stays in the list, struck through, and shows “never use”. Choose <strong>Use</strong>, or click the row to move it to the top, to undo it.</li>
+          <li>usher flags virtual and aggregate devices <strong>never use</strong> when it first sees them.</li>
+          <li>The panel always shows the active device, even one marked never use.</li>
+          <li>usher remembers disconnected devices, so a device keeps its rank when you plug it back in.</li>
+          <li><strong>Forget…</strong> removes a disconnected device. Only disconnected devices have it. The panel asks “Forget AirPods Pro? usher removes it from both lists.” Click <strong>Forget</strong> to confirm or <strong>Cancel</strong>. If you plug it in again, usher adds it as a new device at the bottom.</li>
+        </ul>
+      </section>
+
+      <section id="usb">
+        <h2>USB devices that change ports</h2>
+        <ul>
+          <li>Some USB audio devices get a new macOS identity when you plug them into another port. usher recognises such a device and keeps its rank, so it does not appear twice.</li>
+          <li>The same holds for displays that you disconnect and connect again.</li>
+          <li>usher cannot tell two identical devices apart when both are plugged in at once. From then on, usher stops merging devices of that model, even after a restart.</li>
+          <li>Bluetooth devices match by their exact identity only.</li>
+          <li>At launch, usher waits a moment for USB devices to appear, so a device that moved port while usher was closed does not cause a brief switch away. A change can also take about half a second longer to apply while a USB device is still being identified.</li>
+        </ul>
+      </section>
+
+      <section id="settings">
+        <h2>Settings</h2>
+        <p>Open it with <strong>Settings…</strong> in the panel or in the right-click menu. Changes apply at once.</p>
+        <Shot name="settings" alt="The usher Settings window: Open at login, Check for updates daily with Check now, Debug logging with Show log in Finder, and the version. An update is waiting: the Updates group shows “usher 0.1.3 is available.” and a What's new… button." caption="Settings." narrow />
+        <ul>
+          <li><strong>Open at login:</strong> start usher when you log in. If macOS lists usher as not allowed in System Settings › General › Login Items, allow it there. A development build refuses this change.</li>
+          <li><strong>Check for updates daily:</strong> look for updates by itself. <strong>Check now</strong> checks at once.</li>
+          <li><strong>Debug logging:</strong> add detail to the log. The panel shows a <strong>Debug</strong> tag while it is on.</li>
+          <li><strong>Show log in Finder:</strong> select <code>usher.log</code> in Finder (or open its folder when there is no log yet).</li>
+          <li><strong>Version</strong> at the bottom.</li>
+        </ul>
+      </section>
+
+      <section id="updates">
+        <h2>Updates</h2>
+        <ul>
+          <li>With <strong>Check for updates daily</strong> on, usher checks 30 seconds after it starts, then once a day.</li>
+          <li><strong>Check now</strong> in Settings and <strong>Check for Updates…</strong> in the right-click menu check at once. The Settings line reads “usher 0.1.3 is up to date.” (your version) or “usher 0.1.4 is available.” (the new one). A failed check reads “Could not check for updates:” and the reason.</li>
+          <li>usher never interrupts you. A found update shows as <strong>Update to usher X…</strong> in the panel footer and in the right-click menu, and as a <strong>What's new…</strong> button in Settings. Each opens What's new.</li>
+        </ul>
+        <Shot name="whatsnew" alt="The What's new window with the release notes and the Later and Install and restart buttons." caption="What's new." narrow />
+        <ul>
+          <li>Read the release notes, then click <strong>Install and restart</strong>. <strong>Later</strong> closes the window.</li>
+          <li>usher installs an update only when you click, and relaunches itself. If the install fails, the window shows the reason and <strong>Try again</strong>.</li>
+          <li>Updates are signed. usher refuses any other.</li>
+          <li><kbd>Esc</kbd> closes What's new.</li>
+        </ul>
+      </section>
+
+      <section id="logs">
+        <h2>Logs and troubleshooting</h2>
+        <ul>
+          <li>The log is <code>~/Library/Logs/com.cef62.usher/usher.log</code>. It stays on your Mac. It rotates at 1 MB and keeps 5 files. Open it with <strong>Show log in Finder</strong> in Settings.</li>
+          <li>It has one line for each event that matters: each time usher sets a default device, loop guard trips, forgets, update checks and Auto-switch toggles. Device names appear as macOS reports them.</li>
+          <li>Turn on <strong>Debug logging</strong> in Settings for more detail, with no restart. Turn it off again when done. Running from a terminal with <code>USHER_LOG=debug</code> does the same.</li>
+          <li>The panel shows a red line with ⚠, such as “couldn't switch output to <em>device</em>: …”, when macOS refuses a change. usher does not retry in the same event.</li>
+          <li>If the audio system restarts, usher reconnects by itself, and retries until it works. Meanwhile the panel may say “usher is reconnecting to the audio system; try again in a moment”.</li>
+          <li>“Changes are not saved: state.json is from a newer usher or could not be read.” means usher cannot save your changes. It leaves the file as it is. Update usher, or check that file.</li>
+          <li>If usher sees an unreadable state file, it moves it aside as <code>state.json.corrupt</code> and starts fresh. The file is in <code>~/Library/Application Support/com.cef62.usher/</code>.</li>
+          <li>The panel may not open over an app in full screen. This is a known limit.</li>
+          <li>The right-click menu does not need the panel: if the panel does not open, use <strong>Auto-switch</strong> and <strong>Quit usher</strong> there.</li>
+        </ul>
+      </section>
+    </article>
+  </div>
+</Base>
