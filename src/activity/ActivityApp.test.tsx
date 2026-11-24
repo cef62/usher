@@ -34,7 +34,10 @@ test("a live line that arrives before the history shows once", async () => {
   act(() => push(line(5)));
   resolve([line(5), line(4)]);
   await flush();
-  expect([...root.querySelectorAll("li")].map((li) => li.textContent)).toHaveLength(2);
+  const rows = [...root.querySelectorAll("li")].map((li) => li.textContent);
+  expect(rows).toHaveLength(2);
+  expect(rows[0]).toContain("t5");
+  expect(rows[1]).toContain("t4");
 });
 
 test("loads diagnostics on open and Refresh, copies the shown text", async () => {
@@ -56,4 +59,26 @@ test("loads diagnostics on open and Refresh, copies the shown text", async () =>
   write.mockRejectedValue("denied");
   await act(async () => click(button(root, "Copy diagnostics")));
   expect(root.querySelector('[role="status"]')?.textContent).toBe("Couldn't copy: denied");
+});
+
+test("history is fetched only after the listener is registered", async () => {
+  let registered!: () => void;
+  mocks.listen.mockImplementation(() => new Promise((r) => (registered = () => r(() => {}))));
+  mocks.invoke.mockResolvedValue([]);
+  mount(<ActivityApp />);
+  await flush();
+  expect(mocks.invoke).not.toHaveBeenCalledWith("get_activity");
+  registered();
+  await flush();
+  expect(mocks.invoke).toHaveBeenCalledWith("get_activity");
+});
+
+test("a failed history shows a message and logs it", async () => {
+  const err = vi.spyOn(console, "error").mockImplementation(() => {});
+  mocks.invoke.mockRejectedValue("denied");
+  const { root } = mount(<ActivityApp />);
+  await flush();
+  expect(root.querySelector('[role="alert"]')?.textContent).toBe("Couldn't load the history: denied");
+  expect(err).toHaveBeenCalledWith("Couldn't load the history: denied");
+  err.mockRestore();
 });

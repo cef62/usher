@@ -3,6 +3,7 @@ import { clock } from "./lines";
 
 type Props = {
   lines: Line[];
+  loadError: string | null;
   report: string;
   status: string | null;
   onToggle(open: boolean): void;
@@ -10,17 +11,18 @@ type Props = {
   onCopy(): void;
 };
 
-export function Activity({ lines, report, status, onToggle, onRefresh, onCopy }: Props) {
+export function Activity({ lines, loadError, report, status, onToggle, onRefresh, onCopy }: Props) {
   return (
     <main>
       <h2>History</h2>
+      {loadError && <p role="alert" className="error">{loadError}</p>}
       {lines.length === 0 ? (
         <p className="note">Nothing yet this session.</p>
       ) : (
         <ul className="group lines" role="list">
           {lines.map((l) => (
             <li key={l.seq} className="row">
-              <span className="time">{clock(l.at)}</span> {l.text}
+              <span className="time">{clock(l.at)}</span> · {l.text}
               {l.why && <> · <span className="note">{l.why}</span></>}
             </li>
           ))}

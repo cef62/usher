@@ -6,12 +6,19 @@ import { merge } from "./lines";
 export function ActivityApp() {
   const [lines, setLines] = useState<api.Line[]>([]);
   const [report, setReport] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
     // listen first, so a line between the two calls is not lost; merge drops the overlap
     const un = api.onLine((l) => setLines((cur) => merge(cur, [l])));
-    api.history().then((h) => setLines((cur) => merge(cur, h)), () => {});
+    un.then(api.history).then(
+      (h) => setLines((cur) => merge(cur, h)),
+      (e) => {
+        console.error(`Couldn't load the history: ${String(e)}`);
+        setLoadError(`Couldn't load the history: ${String(e)}`);
+      },
+    );
     return () => void un.then((f) => f());
   }, []);
 
@@ -23,7 +30,7 @@ export function ActivityApp() {
     );
   return (
     <Activity
-      lines={lines} report={report} status={status}
+      lines={lines} loadError={loadError} report={report} status={status}
       onToggle={(open) => open && void load()} onRefresh={() => void load()} onCopy={() => void copy()}
     />
   );

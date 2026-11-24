@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { click, mount } from "../test/dom";
+import { click, mount as rawMount } from "../test/dom";
 import type { Command, Row, View } from "../types";
 import { READ_ONLY } from "./text";
 import { PanelView, type Actions } from "./PanelView";
@@ -34,14 +34,14 @@ const menuItem = (r: Element, text: string) => [...r.querySelectorAll<HTMLElemen
 const button = (r: Element, text: string) => [...r.querySelectorAll("button")].find((b) => b.textContent === text)!;
 
 beforeEach(() => { sent = []; opened = 0; activityOpened = 0; });
-afterEach(() => { document.body.innerHTML = ""; });
-
-test("footer order", () => {
-  const { root } = mount(ui(v({ update: "0.2.0" })));
-  expect([...root.querySelectorAll("footer > button")].map((b) => b.textContent)).toEqual(["Update to usher 0.2.0…", "Activity…", "Settings…", "Quit"]);
-  click(button(root, "Activity…"));
-  expect(activityOpened).toBe(1);
-});
+// unmount every root: a root left mounted keeps rendering into a detached node and starves later tests
+const mounted: (() => void)[] = [];
+const mount = (n: Parameters<typeof rawMount>[0]) => {
+  const m = rawMount(n);
+  mounted.push(m.unmount);
+  return m;
+};
+afterEach(() => { mounted.splice(0).forEach((u) => u()); document.body.innerHTML = ""; });
 
 test("paused banner shows the M2 copy only while paused", () => {
   const { root, rerender } = mount(ui(v({ paused: { role: "output", key: "AirPods-uid", name: "AirPods" } })));
@@ -154,8 +154,15 @@ test("mousedown on the menu and on the … button keeps focus so a click lands",
 
 test("shows the pending update in the footer and opens What's new, never installs", () => {
   const { root } = mount(ui(v({ update: "0.2.0" })));
-  act(() => click(button(root, "Update to usher 0.2.0…")));
+  click(button(root, "Update to usher 0.2.0…"));
   expect(opened).toBe(1);
   expect(sent).toEqual([]);
   expect(mount(ui(v())).root.textContent).not.toContain("Update to usher");
+});
+
+test("footer order", () => {
+  const { root } = mount(ui(v({ update: "0.2.0" })));
+  expect([...root.querySelectorAll("footer > button")].map((b) => b.textContent)).toEqual(["Update to usher 0.2.0…", "Activity…", "Settings…", "Quit"]);
+  click(button(root, "Activity…"));
+  expect(activityOpened).toBe(1);
 });
