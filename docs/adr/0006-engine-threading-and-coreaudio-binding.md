@@ -67,7 +67,7 @@ Writes go to a temp file and are renamed into place.
 
 **Timing and error rules.**
 - Coalescing is a fixed 150 ms window from the first event. Churn cannot starve it. Commands use
-  the same window. The launch reconcile runs at once.
+  the same window. The launch reconcile runs at once (amended by [0009](0009-reconcile-waits-for-usb-verdicts.md): not while a USB verdict is unresolved).
 - The save debounce is a fixed 500 ms window from the first change. A seed saves at once.
 - For `Output`, `set_default` also sets the system output device. If that second write fails,
   usher logs a `warn` and sets no error line, because the main default did change.

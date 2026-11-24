@@ -87,5 +87,5 @@ The root `Cargo.toml` is a workspace with these members:
 
 ## Backlog (post-v1)
 
-- Unresolved USB at launch can switch away for up to 500 ms (M4 plan, Decision 24). A fix reverses ADR 0006 ("the launch reconcile runs at once").
-- The panel may not show over a full-screen app's Space (ADR 0007).
+- Done: unresolved USB at launch no longer switches away (ADR 0009).
+- Closed: the panel shows over full-screen apps (owner check, 2026-11-24).

@@ -55,7 +55,54 @@ fn due_usb_recheck_is_absorbed_by_the_coalesced_reconcile() {
     e.handle(Event::Audio(AudioEvent::DevicesChanged), at(400));
     e.tick(at(600));
     assert_eq!(fake.world().scans, 2);
-    assert_eq!(e.next_due(), Some(at(1_100)));
+    // the absorbing scan is the recheck: it seeds and acts, and no further recheck is scheduled
+    assert_eq!(e.saves(), 1);
+    e.tick(at(1_200));
+    assert_eq!(fake.world().scans, 2);
+}
+
+#[test]
+fn launch_with_unresolved_usb_waits_for_the_recheck_before_switching() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    // AirPods hold the output, unranked: a reconcile switches to the speakers
+    fake.world().current.output = Some("AirPods-uid".into());
+    fake.world().usb_unresolved = true;
+    state_file(d.path(), &ranked(&["BuiltInSpeakerDevice"]));
+    let (mut e, _) = boot(fake.clone(), d.path());
+    assert!(fake.world().sets.is_empty());
+    fake.world().usb_unresolved = false;
+    e.tick(at(500));
+    assert_eq!(fake.world().scans, 2);
+    assert_eq!(fake.world().sets.len(), 1);
+}
+
+#[test]
+fn first_launch_with_unresolved_usb_seeds_at_the_recheck() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    fake.world().usb_unresolved = true;
+    let (mut e, _) = boot(fake.clone(), d.path());
+    assert_eq!(e.saves(), 0);
+    // still unresolved at the recheck: usher acts anyway, a verdict may never come (IOKit failure)
+    e.tick(at(500));
+    assert_eq!(e.saves(), 1);
+}
+
+#[test]
+fn unresolved_usb_after_a_device_event_defers_the_switch_to_the_recheck() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = trio();
+    state_file(d.path(), &ranked(&["AirPods-uid", "BuiltInSpeakerDevice"]));
+    let (mut e, _) = boot(fake.clone(), d.path());
+    let sets = fake.world().sets.len();
+    fake.world().usb_unresolved = true;
+    fake.world().current.output = Some("BuiltInSpeakerDevice".into());
+    e.handle(Event::Audio(AudioEvent::DevicesChanged), at(1_000));
+    e.tick(at(1_150));
+    assert_eq!(fake.world().sets.len(), sets);
+    e.tick(at(1_650));
+    assert_eq!(fake.world().sets.len(), sets + 1);
 }
 
 #[test]
