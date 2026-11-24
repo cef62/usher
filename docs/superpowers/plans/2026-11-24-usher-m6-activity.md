@@ -57,7 +57,7 @@ None. Release 0.2.0 follows the usual Version Packages PR after the M6 merge, on
 8. **Copy left to the builder (§12).** `why` texts: `<name> connected`, `<name> disconnected`, `<taker> took output; usher put it back` (`input`), `changed in usher` (Ranked), `usher started` (Launch), `usher reconnected to the audio system` (Rebind). `Resumed` is produced by the engine when a command turns Auto-switch on (any off→on), not by `explain`.
 9. **History lines are rendered in Rust.** `activity::Line { seq: u64, at: u64, text: String, why: Option<String> }` (`at` = wall ms). `seq` lets the page drop a live line it also fetched. The role is the text's first word, so there is no separate role column (layout detail, §12).
 10. **Diagnostics query (PR #16 correction).** `Event::Diagnostics(Sender<Diagnostics>)`, its own reply channel (`Reply` carries no payload). It answers before the first scan too (`engine.scanned = false`, no devices): a broken engine is when diagnostics matter. `get_diagnostics` adds `AppInfo` (version, `sw_vers -productVersion` or `unknown`, log path) and returns the rendered text.
-11. **Redaction (PR #16 correction to §5.4).** UIDs render only through known-safe shapes: built-in (`BuiltIn` + ASCII alphanumerics) as is; `AppleUSBAudioEngine:<vendor>:<product>:<field4>:<n>` (exactly 5 fields) with field 4 kept only when the device is confirmed serial-less (`serialless_usb`, or a stored `family`), else `<serial>`; a Bluetooth address shape (`XX-XX-XX-XX-XX-XX:output|:input`, hex any case) as `xx-xx-xx-xx-CF-9D:output`. Any other UID is `uid#<n>`, numbered per report in order of first appearance; a family (alias) renders as `AppleUSBAudioEngine:<vendor>:<product>` when it has that 3-field shape, else as its device key's `uid#<n>`. Names drop a leading `<name>'s ` / `<name>’s `. The home folder becomes `~` only at a path-segment boundary. The Activity window shows the same redacted text Copy puts on the clipboard.
+11. **Redaction (PR #16 correction to §5.4).** UIDs render only through known-safe shapes: built-in (`BuiltIn` + ASCII alphanumerics) as is; `AppleUSBAudioEngine:<vendor>:<product>:<field4>:<n>` (exactly 5 fields) with field 4 kept only when the device is confirmed serial-less (`serialless_usb`, or a stored `family`), else `<serial>`; a Bluetooth address shape (`XX-XX-XX-XX-XX-XX:output|:input`, hex any case) as `xx-xx-xx-xx-CF-9D:output`. Any other UID is `uid#<n>`, numbered per report in order of first appearance; a family (alias) renders as `AppleUSBAudioEngine:<vendor>:<product>` when it has that 3-field shape, else as its device key's `uid#<n>`. Names drop a leading `<name>'s ` / `<name>’s `, and every whole-word, case-insensitive occurrence of the Mac account's own names (the words of the full name from `id -F`, and the short user name; words under 3 letters ignored), together with a connector word just before it (`di`, `de`, `da`, `du`, `del`, `von`, `van`, `of`): "AirPods Pro di Matteo" → "AirPods Pro" on an Italian Mac (controller call, owner wants public-safe text). The home folder becomes `~` only at a path-segment boundary. The Activity window shows the same redacted text Copy puts on the clipboard.
 12. **Activity window.** Built like Settings: `activity.html`, title `usher Activity`, 480×560, min 360×320, resizable, not minimizable or maximizable, centred, Liquid Glass (`glass::apply`, `WINDOW_RADIUS`), overlay title bar with the drag strip. `panel::KEEP_FOCUS` gains `activity`. The `activity` event goes only to this window (`emit_to`). Diagnostics sit in a native `<details>` (collapsed); they load when it opens and on **Refresh**. Copy uses `navigator.clipboard.writeText` on the click; a failure shows `Couldn't copy: <e>`.
 13. **IPC lists.** `panel` and `settings` gain `open_activity`; `settings` gains `set_notify`; `activity` gets `ACTIVITY_COMMANDS`. Shared: `open_whatsnew`, `open_activity` (panel and Settings only).
 14. **Settings.** `SettingsView.notify_switches` (`notifySwitches`) reads `LastView`, default `true` with no view. `PanelState.notify_switches` carries it (as `update_check`).
@@ -204,13 +204,13 @@ Expected: compile errors (`Trigger`, `explain` unknown).
 
 **Interfaces:**
 - Produces:
-  - `#[derive(Clone, Default, PartialEq, Debug)] pub struct AppInfo { pub version: String, pub macos: String, pub log_path: String }`.
+  - `#[derive(Clone, Default, PartialEq, Debug)] pub struct AppInfo { pub version: String, pub macos: String, pub log_path: String, pub owner_names: Vec<String> }`.
   - `#[derive(Clone, Copy, Default, PartialEq, Debug)] pub struct EngineStatus { pub scanned: bool, pub subscribed: bool, pub rebinding: Option<u32>, pub read_only: bool, pub usb_unresolved: bool }` (`rebinding` = attempt number while a rebind is pending).
   - `pub struct RankedReport { pub key: DeviceKey, pub name: String, pub skip: Option<Skip>, pub serialless: bool }`; `pub struct RoleReport { pub role: Role, pub desired: Option<DeviceKey>, pub current: Option<DeviceKey>, pub ranked: Vec<RankedReport> }`; `pub struct DeviceReport { pub key: DeviceKey, pub name: String, pub transport: Transport, pub alive: bool, pub hidden: bool, pub serialless_usb: bool, pub family: Option<String> }`; `pub struct Diagnostics { pub app: AppInfo, pub engine: EngineStatus, pub roles: Vec<RoleReport>, pub devices: Vec<DeviceReport>, pub ambiguous_families: Vec<String> }` (all `Clone, PartialEq, Debug`).
   - `pub fn diagnose(state: &State, snap: &Snapshot, engine: EngineStatus) -> Diagnostics` — `app` default; every ranked key with `skip_cause` (not only those above `desired`); `serialless` = snapshot `serialless_usb` or a stored `family`; `devices` = the snapshot's, in enumeration order, with the stored `family`.
   - `#[derive(Default)] pub struct Redactor { .. }`; `impl Redactor { pub fn uid(&mut self, uid: &str, serialless: bool) -> String; pub fn family(&mut self, family: &str, key: &str) -> String }` (Decision 11).
-  - `pub fn strip_owner(name: &str) -> &str`; `pub fn tilde(path: &str, home: &str) -> String`.
-  - `pub fn render_diagnostics(d: &Diagnostics, home: &str) -> String` — plain text, every name through `strip_owner`, every key and family through one `Redactor`, the log path through `tilde`. Shape:
+  - `pub fn strip_owner(name: &str, owner_names: &[String]) -> String`; `pub fn tilde(path: &str, home: &str) -> String`.
+  - `pub fn render_diagnostics(d: &Diagnostics, home: &str) -> String` — plain text, every name through `strip_owner` with `d.app.owner_names`, every key and family through one `Redactor`, the log path through `tilde`. Shape:
 
 ```text
 usher 0.2.0 · macOS 26.1 · log ~/Library/Logs/com.cef62.usher/usher.log
@@ -254,9 +254,13 @@ ambiguous aliases: none
     assert_eq!(r.family("AppleUSBAudioEngine:Shure:MV7", "AppleUSBAudioEngine:Shure:MV7:14200000:1"), "AppleUSBAudioEngine:Shure:MV7");
 }
 #[test] fn owner_names_and_home_are_dropped() {
-    assert_eq!(strip_owner("Matteo's AirPods Pro"), "AirPods Pro");
-    assert_eq!(strip_owner("Matteo’s AirPods Pro"), "AirPods Pro");
-    assert_eq!(strip_owner("Studio Display Speakers"), "Studio Display Speakers");
+    let ada = vec!["Ada".to_string(), "Lovelace".to_string(), "ada".to_string()];
+    assert_eq!(strip_owner("Ada's AirPods Pro", &ada), "AirPods Pro");
+    assert_eq!(strip_owner("Ada’s AirPods Pro", &ada), "AirPods Pro");
+    assert_eq!(strip_owner("AirPods Pro di Ada", &ada), "AirPods Pro");
+    assert_eq!(strip_owner("AirPods von Ada Lovelace", &ada), "AirPods");
+    assert_eq!(strip_owner("Adapter Speakers", &ada), "Adapter Speakers", "whole words only");
+    assert_eq!(strip_owner("Studio Display Speakers", &[]), "Studio Display Speakers");
     assert_eq!(tilde("/Users/matteo/Library/Logs/com.cef62.usher/usher.log", "/Users/matteo"), "~/Library/Logs/com.cef62.usher/usher.log");
     assert_eq!(tilde("/Users/matteo2/x", "/Users/matteo"), "/Users/matteo2/x");
 }
@@ -438,7 +442,7 @@ it("turns switch notices off through the engine", () => { /* uncheck "Notify whe
   - `Event::Diagnostics(Sender<Diagnostics>)`; `handle` replies with `self.diagnostics()`.
   - `Engine` field `usb_unresolved: bool` (last scan's `usb_unresolved`); `pub fn diagnostics(&self) -> Diagnostics` in `engine/activity.rs` (`scanned` = `snap.is_some()`, `subscribed`, `rebinding` = `rebinding().then_some(rebind_attempt + 1)`, `read_only` = `!store.writable()`).
   - `EngineHandle::diagnostics(&self, timeout: Duration) -> Result<Diagnostics, Refusal>` (`Gone`, `NoAnswer` as `request`).
-  - `activity.rs`: `pub fn macos_version() -> String` (`sw_vers -productVersion`, trimmed, `unknown` on any error, cached in a `OnceLock`); `#[tauri::command] pub async fn get_diagnostics(app: AppHandle, engine: State<'_, EngineHandle>) -> Result<String, String>` — off the main thread (`spawn_blocking`), fills `AppInfo { version: package_info().version, macos, log_path: app_log_dir()/usher.log }`, renders with `home_dir()`.
+  - `activity.rs`: `pub fn macos_version() -> String` (`sw_vers -productVersion`, trimmed, `unknown` on any error, cached in a `OnceLock`); `#[tauri::command] pub async fn get_diagnostics(app: AppHandle, engine: State<'_, EngineHandle>) -> Result<String, String>` — off the main thread (`spawn_blocking`), fills `AppInfo { version: package_info().version, macos, log_path: app_log_dir()/usher.log, owner_names }` (`owner_names`: words of `id -F` plus `$USER`, cached in a `OnceLock`, empty on error), renders with `home_dir()`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -591,4 +595,4 @@ it("opens Activity from Troubleshooting", () => { /* "Open Activity…" → open
 ## Self-review notes
 
 - Spec coverage: §5.1 (Tasks 1, 3; Decisions 1, 4, 6–8), §5.2 (Tasks 1, 4; Decisions 2, 3, 5), §5.3 (Task 3; Decision 9), §5.4 (Tasks 2, 5; Decisions 10, 11), §5.5 (Tasks 6, 7; Decisions 12, 13), §8 M6 parts (file table), §9 ADR 0011 (Task 8), §10 M6 bullets (Tasks 1–5; QA rows 35–42), §11 0.2.0 `minor` (Task 8). Anti-goals: no notice for user changes (Decision 2, `launch_rebind_and_commands_never_notify`), engine-only CoreAudio writes (nothing new writes), safe Copy (Task 2).
-- Not built: a persisted history (v2 non-goal), Escape-to-close for Activity (it would need a third command beyond `ACTIVITY_COMMANDS`), a clipboard plugin, locale-specific owner names (only the `'s` forms the spec names).
+- Not built: a persisted history (v2 non-goal), Escape-to-close for Activity (it would need a third command beyond `ACTIVITY_COMMANDS`), a clipboard plugin, owner names the account does not carry (e.g. a device renamed to someone else's name): the on-screen preview is the backstop.
