@@ -180,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    fn settings_capability_grants_log_listen_and_set_size() {
+    fn settings_capability_grants_log_listen_size_and_drag() {
         let cap: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/settings.json")).unwrap();
         assert_eq!(cap["windows"], serde_json::json!(["settings"]));
@@ -190,7 +190,8 @@ mod tests {
                 "log:default",
                 "core:event:allow-listen",
                 "core:event:allow-unlisten",
-                "core:window:allow-set-size"
+                "core:window:allow-set-size",
+                "core:window:allow-start-dragging"
             ])
         );
     }

@@ -86,12 +86,12 @@ function Footer({ u, phase, busy, later, primary, onInstall, onClose }: FooterPr
   );
 }
 
-type HeroProps = { u: WhatsNewInfo["update"] | null; title: string | null; first: Item | null; heading: RefObject<HTMLHeadingElement | null> };
+type HeroProps = { u: WhatsNewInfo["update"] | null; title: string | null; first: Item | null };
 
-function Hero({ u, title, first, heading }: HeroProps) {
+function Hero({ u, title, first }: HeroProps) {
   return (
     <header className="hero">
-      <h1 id="wn-title" ref={heading} tabIndex={-1}>
+      <h1 id="wn-title">
         {!u ? "No update is waiting" : title ? <Text text={title} /> : `usher ${u.version} is ready`}
       </h1>
       {u ? (
@@ -110,15 +110,11 @@ type Props = { info: WhatsNewInfo | null; phase: Phase; onInstall(): void; onClo
 
 /** The release notes of the waiting update, then "Install and restart" with its progress, failure and retry. */
 export function WhatsNew({ info, phase, onInstall, onClose }: Props) {
-  const heading = useRef<HTMLHeadingElement>(null);
   const primary = useRef<HTMLButtonElement>(null);
   const later = useRef<HTMLButtonElement>(null);
   const u = info?.update ?? null;
   const busy = phase.kind === "downloading" || phase.kind === "installing";
-  // read first: focus starts on the heading, never on Install (one Enter must not restart usher)
-  useEffect(() => {
-    if (info) heading.current?.focus();
-  }, [info]);
+  // nothing takes the focus on open: one Enter must not restart usher, and no focus ring until the user tabs
   // the Install button turns disabled while busy: keep the focus on a live control
   useEffect(() => {
     if (busy && document.activeElement === primary.current) later.current?.focus();
@@ -134,7 +130,7 @@ export function WhatsNew({ info, phase, onInstall, onClose }: Props) {
   return (
     <div className="page">
       <main aria-labelledby="wn-title">
-        <Hero u={u} title={title} first={first} heading={heading} />
+        <Hero u={u} title={title} first={first} />
         <Items id="wn-new" title={first ? "Also new" : "New"} items={first ? notes.highlights.slice(1) : notes.highlights} total={count.highlights - (first ? 1 : 0)} />
         <Items id="wn-fixed" title="Fixed" items={notes.fixes} total={count.fixes} />
         <Items id="wn-other" title={count.highlights + count.fixes ? "Other changes" : "Changes"} items={notes.other} total={count.other} />

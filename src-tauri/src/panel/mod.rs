@@ -96,27 +96,30 @@ fn window(app: &AppHandle) -> Option<WebviewWindow> {
 pub fn setup(app: &AppHandle) {
     app.manage(Mutex::new(Visibility::default()));
     if let Some(w) = app.get_webview_window(LABEL) {
-        glass(&w);
+        glass(&w, RADIUS);
     }
 }
 
 /// Liquid Glass on macOS 26+; the classic materials render near-opaque there. Older macOS gets sidebar vibrancy.
-fn glass(w: &WebviewWindow) {
+/// The window must be transparent. Settings and What's new use it too, with `WINDOW_RADIUS`.
+pub fn glass(w: &WebviewWindow, radius: f64) {
     use window_vibrancy::{
         LiquidGlassOptions, NSGlassEffectViewStyle, NSVisualEffectMaterial, NSVisualEffectState,
         apply_liquid_glass, apply_vibrancy,
     };
-    let opts = LiquidGlassOptions::new(NSGlassEffectViewStyle::Regular).radius(RADIUS);
+    let opts = LiquidGlassOptions::new(NSGlassEffectViewStyle::Regular).radius(radius);
     if let Err(e) = apply_liquid_glass(w, opts) {
         log::debug!("liquid glass unavailable ({e}); using vibrancy");
         let state = Some(NSVisualEffectState::Active);
-        if let Err(e) = apply_vibrancy(w, NSVisualEffectMaterial::Sidebar, state, Some(RADIUS)) {
-            warn!("panel vibrancy failed: {e}");
+        if let Err(e) = apply_vibrancy(w, NSVisualEffectMaterial::Sidebar, state, Some(radius)) {
+            warn!("vibrancy failed: {e}");
         }
     }
 }
 
 const RADIUS: f64 = 10.0;
+/// A titled window's corner on macOS 26.
+pub const WINDOW_RADIUS: f64 = 16.0;
 
 /// Physical monitor frames with their scales. The list is empty while a display sleeps: fall back to the primary.
 fn monitors(app: &AppHandle) -> Option<Vec<(place::Frame, f64)>> {

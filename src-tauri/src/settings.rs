@@ -38,6 +38,8 @@ pub fn open(app: &AppHandle) {
     }
     let built = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("settings.html".into()))
         .title("usher Settings")
+        .transparent(true) // the page draws over Liquid Glass, like the panel
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
         .inner_size(420.0, 360.0)
         .resizable(false)
         .minimizable(false)
@@ -46,6 +48,7 @@ pub fn open(app: &AppHandle) {
         .build();
     match built {
         Ok(w) => {
+            crate::panel::glass(&w, crate::panel::WINDOW_RADIUS);
             w.set_focus().ok();
         }
         Err(e) => warn!("could not open Settings ({e})"),
