@@ -38,6 +38,19 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         self.usb_rechecked = false;
     }
 
+    /// A reconcile from `tick`. A failed scan retries through the bind backoff: the decision it carried (a launch,
+    /// seed or rebind reconcile deferred to the USB recheck) would otherwise wait for the next device event.
+    pub(super) fn reconcile_or_retry(&mut self, now: Instant) {
+        if !self.run_reconcile(now) {
+            // events are dropped until the retry: a device plugged in meanwhile still gets its USB recheck
+            self.usb_rechecked = false;
+            let d = retry_delay(self.rebind_attempt);
+            warn!("scan retry in {} s", d.as_secs());
+            self.rebind_due = Some(now + d);
+            self.rebind_attempt += 1;
+        }
+    }
+
     /// One bind attempt (subscribe, or rebind when already subscribed) followed by a scan.
     pub(super) fn attempt_bind(&mut self, now: Instant) {
         let n = self.rebind_attempt;

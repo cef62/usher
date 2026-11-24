@@ -18,6 +18,13 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 return false;
             }
         };
+        // an unresolved verdict can hide a serial-less USB device that moved port: acting now would switch away
+        // from it and back 500 ms later, so the recheck acts instead (seeding too)
+        if scan.usb_unresolved && !self.usb_rechecked {
+            self.usb_due.get_or_insert(now + USB_RECHECK);
+            debug!("reconcile deferred to the USB recheck");
+            return true;
+        }
         let snap = scan.snapshot;
         let wall = self.clock.wall(now);
         if self.seed_pending {
@@ -36,9 +43,6 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         self.clear_errors(&out.reasons);
         if !self.state.auto_switch {
             self.errors = PerRole::default();
-        }
-        if scan.usb_unresolved && !self.usb_rechecked && self.usb_due.is_none() {
-            self.usb_due = Some(now + USB_RECHECK);
         }
         self.snap = Some(snap);
         self.emit();

@@ -160,16 +160,17 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         }
         if self.reconcile_due.is_some_and(|d| d <= now) {
             self.reconcile_due = None;
-            // a recheck that is already due would scan twice back to back
+            // a recheck that is already due would scan twice back to back: this scan is the recheck
             if self.usb_due.is_some_and(|d| d <= now) {
                 self.usb_due = None;
+                self.usb_rechecked = true;
             }
-            self.run_reconcile(now);
+            self.reconcile_or_retry(now);
         }
         if self.usb_due.is_some_and(|d| d <= now) {
             self.usb_due = None;
             self.usb_rechecked = true;
-            self.run_reconcile(now);
+            self.reconcile_or_retry(now);
         }
         self.store.save_if_due(&self.state, now);
     }
