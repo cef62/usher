@@ -25,6 +25,8 @@ export const settingsApi = {
   setDebug: (on: boolean) => invoke<void>("set_debug", { on }),
   setUpdateCheck: (on: boolean) => invoke<void>("set_update_check", { on }),
   checkNow: () => invoke<{ version: string } | null>("check_update"),
+  // the daily check and the panel publish the pending version with every view
+  onUpdate: (cb: (version: string | null) => void) => listen<View>("state-changed", (e) => cb(e.payload.update)),
   openWhatsNew: () => invoke<void>("open_whatsnew"),
   fit: (contentHeight: number) => getCurrentWindow().setSize(new LogicalSize(SETTINGS_WIDTH, contentHeight)),
   revealLog: () => invoke<void>("reveal_log"),

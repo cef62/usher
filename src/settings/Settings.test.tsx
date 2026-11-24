@@ -10,6 +10,7 @@ const view = (p: Partial<SettingsView> = {}): SettingsView => ({ login: false, l
 let calls: unknown[][] = [];
 let checkResult: () => Promise<{ version: string } | null>;
 let loginResult: () => Promise<boolean>;
+let pushUpdate: (version: string | null) => void = () => {};
 const api: typeof settingsApi = {
   get: async () => view(),
   setLogin: (on) => (calls.push(["setLogin", on]), loginResult()),
@@ -19,6 +20,7 @@ const api: typeof settingsApi = {
   openWhatsNew: async () => void calls.push(["openWhatsNew"]),
   fit: async () => {},
   revealLog: async () => void calls.push(["revealLog"]),
+  onUpdate: async (cb) => ((pushUpdate = cb), () => {}),
 };
 const checkbox = (r: Element, label: string) =>
   [...r.querySelectorAll("label")].find((l) => l.textContent?.startsWith(label))!.querySelector("input")!;
@@ -104,4 +106,20 @@ test("a pending update shows in Settings and opens What's new", async () => {
   expect(status(root)).toBe("usher 0.2.0 is available.");
   await act(async () => click(button(root, "What's new…")));
   expect(calls).toEqual([["openWhatsNew"]]);
+});
+
+test("an update found while Settings is open shows without reopening it", async () => {
+  const { root } = mount(<SettingsPage initial={view()} api={api} />);
+  expect(status(root)).toBe("usher 0.1.0 is up to date.");
+  await act(async () => pushUpdate("0.2.0"));
+  expect(status(root)).toBe("usher 0.2.0 is available.");
+  expect(button(root, "What's new…")).toBeTruthy();
+});
+
+test("a pushed update replaces an earlier check failure", async () => {
+  const { root } = mount(<SettingsPage initial={view()} api={api} />);
+  checkResult = () => Promise.reject("offline");
+  await act(async () => click(button(root, "Check now")));
+  await act(async () => pushUpdate("0.2.0"));
+  expect(status(root)).toBe("usher 0.2.0 is available.");
 });
