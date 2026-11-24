@@ -69,13 +69,16 @@ pub fn macos_version() -> String {
     .clone()
 }
 
-/// The alphanumeric parts of the full name and short name worth stripping from a report: 3+ letters each.
+/// The alphanumeric parts of the full name and short name worth stripping from a report: 3+ letters each, 2+ with a non-ASCII letter.
 /// Parts, not words: `strip_owner` compares whole alphanumeric parts, so `john.smith` must become `john`, `smith`.
 fn owner_words(full_name: &str, user: &str) -> Vec<String> {
     full_name
         .split(|c: char| !c.is_alphanumeric())
         .chain(user.split(|c: char| !c.is_alphanumeric()))
-        .filter(|w| w.chars().filter(|c| c.is_alphabetic()).count() >= 3)
+        .filter(|w| {
+            let letters = w.chars().filter(|c| c.is_alphabetic()).count();
+            letters >= 3 || (letters >= 2 && !w.is_ascii())
+        })
         .map(str::to_string)
         .collect()
 }
@@ -227,6 +230,10 @@ mod tests {
         let w = owner_words("Ada Lo Lovelace", "ada");
         assert_eq!(w, ["Ada", "Lovelace", "ada"]);
         assert!(owner_words("", "").is_empty());
+        assert_eq!(
+            owner_words("山田 太郎", "yamada"),
+            ["山田", "太郎", "yamada"]
+        );
         assert_eq!(
             owner_words("Jo O'Brien", "mary-jane"),
             ["Brien", "mary", "jane"]

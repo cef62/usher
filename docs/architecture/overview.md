@@ -49,7 +49,8 @@ flowchart LR
   POL --> GUARD
   POL --> ID
   ENG --> ACTV
-  ENG -- activity lines, notices --> ACT
+  ENG -- activity lines --> ACT
+  ENG -- notices --> NOTE[macOS notification]
   ENG --> STORE
   STORE --> ST
   ENG -- state-changed --> PANEL

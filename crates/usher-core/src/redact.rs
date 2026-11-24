@@ -63,7 +63,7 @@ impl Redactor {
 const CONNECTORS: [&str; 8] = ["di", "de", "da", "du", "del", "von", "van", "of"];
 
 /// Drops owner names from a device name: a leading `<x>'s`, and whole-word matches
-/// (with one connector word before them).
+/// (with one connector word before them); non-ASCII names also match inside a word.
 pub fn strip_owner(name: &str, owner_names: &[String]) -> String {
     let mut words: Vec<&str> = name.split_whitespace().collect();
     if words.len() > 1 && (words[0].ends_with("'s") || words[0].ends_with("’s")) {
@@ -71,14 +71,18 @@ pub fn strip_owner(name: &str, owner_names: &[String]) -> String {
     }
     let owners: Vec<String> = owner_names
         .iter()
-        .filter(|o| o.chars().count() >= 3)
+        .filter(|o| o.chars().count() >= if o.is_ascii() { 3 } else { 2 })
         .map(|o| o.to_lowercase())
         .collect();
     let mut out: Vec<&str> = Vec::new();
     for w in words {
-        let is_owner = w
-            .split(|c: char| !c.is_alphanumeric())
-            .any(|part| owners.contains(&part.to_lowercase()));
+        let is_owner = w.split(|c: char| !c.is_alphanumeric()).any(|part| {
+            let part = part.to_lowercase();
+            // Non-ASCII names sit glued to particles (`山田の…`), so they match inside a part.
+            owners
+                .iter()
+                .any(|o| *o == part || (!o.is_ascii() && part.contains(o.as_str())))
+        });
         if !is_owner {
             out.push(w);
         } else if out

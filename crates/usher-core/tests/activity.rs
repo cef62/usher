@@ -153,7 +153,7 @@ fn unplug_with_a_fallback_default_is_disconnected() {
     )
     .unwrap();
     assert_eq!(e.why_text().as_deref(), Some("AirPods disconnected"));
-    assert_eq!(e.text(), "Output: MacBook Pro Speakers → Studio Display");
+    assert_eq!(e.text(), "Output: AirPods → Studio Display");
 }
 
 #[test]

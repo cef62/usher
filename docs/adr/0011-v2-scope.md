@@ -33,7 +33,7 @@ speaker and headphone lists, vendor HID and Intel builds. All v1 anti-goals stil
 notice for a change the user made in usher, no CoreAudio write outside the engine thread, nothing
 unsafe to paste in a public issue in Copy diagnostics.
 
-M6 departs from the spec text in four places (plan `2026-11-24-usher-m6-activity.md`):
+M6 departs from the spec text in three places (plan `2026-11-24-usher-m6-activity.md`):
 
 - **Decision 4, trigger merge order.** The spec's precedence is extended to
   `Command > Rebind > Launch > DefaultChanged > DevicesChanged`. `Launch` and `Rebind` are history
@@ -45,12 +45,14 @@ M6 departs from the spec text in four places (plan `2026-11-24-usher-m6-activity
 - **Decision 11, owner-name stripping goes beyond the spec's `'s` rule.** Besides a leading
   `<name>'s `, any whole word, case-insensitive, of the Mac account's full name or short name is
   removed together with a connector word before it (`di`, `de`, `da`, `du`, `del`, `von`, `van`,
-  `of`). Device names carry the owner in any language ("AirPods Pro di Ada" on an Italian Mac), and the
+  `of`). A non-ASCII name (`山田`) also matches inside a word, as CJK names sit glued to particles. Device names carry the owner in any language ("AirPods Pro di Ada" on an Italian Mac), and the
   text is meant for public issues.
-- **Decisions 1 to 3, 5, 6, 10:** the cause comes from the snapshot diff, not the trigger; at most
+- **Clarifications, not departures:** Decisions 1 to 3, 5, 6, 10: the cause comes from the snapshot diff, not the trigger; at most
   one notice per role per 10 s (history keeps every entry); `Shell::notice` sits beside
   `Shell::activity`; entries hold names, not keys; diagnostics answer before the first scan; the
   window shows the redacted text Copy puts on the clipboard.
+  The spec §5.2 line "notifications are not allowed" cannot be observed: the notification plugin on
+  desktop always reports permission as granted, so the line is never logged.
 
 ## Consequences
 

@@ -39,7 +39,7 @@ for (const scheme of ['light', 'dark']) {
   }
 
   // settings and what's new: capture the page at the real window size, then wrap it in a window frame
-  for (const [name, page, w, h0, title] of [['settings', 'settings.html', 420, null, 'Settings'], ['whatsnew', 'whatsnew.html', 520, 560, "What's new"], ['activity', 'activity.html', 480, 560, 'Activity']]) {
+  for (const [name, page, w, h0, title] of [['settings', 'settings.html', 420, null, 'Settings'], ['whatsnew', 'whatsnew.html', 520, 560, "What's new"], ['activity', 'activity.html', 480, 560, 'usher Activity']]) {
     const c2 = await browser.newContext({ colorScheme: scheme, deviceScaleFactor: 2, viewport: { width: w, height: h0 ?? 900 } });
     await c2.addInitScript(mock);
     const s = await c2.newPage();

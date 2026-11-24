@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use std::sync::mpsc::Receiver;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use log::{error, warn};
+use log::{error, info, warn};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::{NotificationExt, PermissionState};
 use usher_core::{Entry, PausedReason, Timestamp};
@@ -113,7 +113,7 @@ fn show(app: AppHandle, body: String) {
             _ => matches!(n.request_permission(), Ok(PermissionState::Granted)),
         };
         if !granted {
-            warn!("notifications are not allowed; notice not shown");
+            info!("notifications are not allowed; notice not shown");
         } else if let Err(e) = n.builder().title("usher").body(body).show() {
             warn!("notification failed ({e})");
         }

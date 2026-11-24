@@ -187,16 +187,24 @@ pub fn explain(
             to: to(),
             error: error.clone(),
         },
-        Wrote::Set => Entry::Switched {
-            role,
-            from: snap
-                .current
-                .get(role)
-                .as_ref()
-                .map(|k| name_of(k, prev, snap)),
-            to: to(),
-            why: why_of(trigger, prev, snap, reason),
-        },
+        Wrote::Set => {
+            let why = why_of(trigger, prev, snap, reason);
+            // macOS already fell back when a device left: name the one that left, not the fallback.
+            let from = match &why {
+                Why::Disconnected(n) => Some(n.clone()),
+                _ => snap
+                    .current
+                    .get(role)
+                    .as_ref()
+                    .map(|k| name_of(k, prev, snap)),
+            };
+            Entry::Switched {
+                role,
+                from,
+                to: to(),
+                why,
+            }
+        }
     })
 }
 

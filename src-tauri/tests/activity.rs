@@ -77,7 +77,7 @@ fn unplug_reads_as_disconnected_not_corrected() {
     e.tick(at(300));
     let last = rec.entries().last().cloned().unwrap();
     assert_eq!(why(&last).as_deref(), Some("AirPods disconnected"));
-    assert_eq!(last.text(), "Output: MacBook Pro Speakers → Studio Display");
+    assert_eq!(last.text(), "Output: AirPods → Studio Display");
 }
 
 #[test]

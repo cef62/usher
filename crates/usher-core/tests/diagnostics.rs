@@ -60,6 +60,15 @@ fn unknown_uid_shapes_become_indexed_placeholders() {
 }
 
 #[test]
+fn non_ascii_owner_names_match_inside_a_part() {
+    let o = vec!["山田".to_string(), "Zoë".to_string(), "Ada".to_string()];
+    assert_eq!(strip_owner("山田のAirPods Pro", &o), "Pro");
+    assert_eq!(strip_owner("山田的AirPods", &o), "unknown device");
+    assert_eq!(strip_owner("Zoë의 AirPods", &o), "AirPods");
+    assert_eq!(strip_owner("Adapter Speakers", &o), "Adapter Speakers");
+}
+
+#[test]
 fn owner_names_and_home_are_dropped() {
     let ada = vec!["Ada".to_string(), "Lovelace".to_string(), "ada".to_string()];
     assert_eq!(strip_owner("Ada's AirPods Pro", &ada), "AirPods Pro");
