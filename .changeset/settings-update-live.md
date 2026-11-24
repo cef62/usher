@@ -2,4 +2,4 @@
 "usher": patch
 ---
 
-Settings now shows a newly found update right away, without being closed and reopened.
+Fixed Settings not showing a newly found update until it was closed and reopened.

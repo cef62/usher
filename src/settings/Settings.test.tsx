@@ -115,3 +115,11 @@ test("an update found while Settings is open shows without reopening it", async 
   expect(status(root)).toBe("usher 0.2.0 is available.");
   expect(button(root, "What's new…")).toBeTruthy();
 });
+
+test("a pushed update replaces an earlier check failure", async () => {
+  const { root } = mount(<SettingsPage initial={view()} api={api} />);
+  checkResult = () => Promise.reject("offline");
+  await act(async () => click(button(root, "Check now")));
+  await act(async () => pushUpdate("0.2.0"));
+  expect(status(root)).toBe("usher 0.2.0 is available.");
+});

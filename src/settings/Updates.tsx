@@ -10,7 +10,7 @@ export function Updates({ view, api, run, onCheck }: Props) {
   const [failure, setFailure] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   useEffect(() => {
-    const off = api.onUpdate(setVersion);
+    const off = api.onUpdate((v) => (setVersion(v), v && setFailure(null)));
     return () => void off.then((f) => f());
   }, [api]);
   const checkNow = async () => {
