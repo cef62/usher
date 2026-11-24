@@ -371,7 +371,7 @@ fn notices_off_still_records_history() {
     correct(&mut e, &fake, 10_200);
     assert_eq!(rec.entries().len(), 1);
     assert!(rec.notices().is_empty());
-    e.tick(at(3_000));
+    e.tick(at(20_000));
     assert!(!read_state(d.path()).notify_switches);
 }
 
