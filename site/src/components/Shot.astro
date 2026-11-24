@@ -1,0 +1,46 @@
+---
+import { getImage } from 'astro:assets';
+
+// One screenshot with a light and a dark variant: `name` is the file stem in src/assets/screens
+// (`<name>-light.jpg`, `<name>-dark.jpg`). The dark source wins when the visitor prefers dark.
+interface Props {
+  name: string;
+  alt: string;
+  caption?: string;
+  priority?: boolean;
+  narrow?: boolean;
+}
+const { name, alt, caption, priority = false, narrow = false } = Astro.props;
+
+const files = import.meta.glob<{ default: ImageMetadata }>('../assets/screens/*.jpg', { eager: true });
+const meta = (scheme: string) => {
+  const m = files[`../assets/screens/${name}-${scheme}.jpg`];
+  if (!m) throw new Error(`missing screenshot ${name}-${scheme}.jpg`);
+  return m.default;
+};
+// the shots are 2x: serve at half their pixel width plus a 2x candidate
+const make = async (scheme: string) => {
+  const src = meta(scheme);
+  const width = Math.round(src.width / 2);
+  const [x1, x2] = await Promise.all([getImage({ src, width, format: 'webp' }), getImage({ src, width: width * 2, format: 'webp' })]);
+  return { srcset: `${x1.src} 1x, ${x2.src} 2x`, width, height: Math.round(src.height / 2), fallback: x1.src };
+};
+const light = await make('light');
+const dark = await make('dark');
+---
+
+<figure class:list={['shot', { narrow }]}>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset={dark.srcset} />
+    <img
+      src={light.fallback}
+      srcset={light.srcset}
+      width={light.width}
+      height={light.height}
+      alt={alt}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+    />
+  </picture>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
