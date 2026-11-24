@@ -86,32 +86,35 @@ Triggers: `Launch`, `DevicesChanged`, `DefaultChanged(role)`, `Command`, `Rebind
 | `Paused { reason }` | loop guard tripped (v1 §5.4) | the v1 pause text |
 | `Resumed` | Auto-switch turned back on | `Auto-switch on` |
 
-`why` is one of:
+`why` comes from **comparing the previous snapshot with this one**, never from which event arrived first:
+an unplug fires devices-changed and default-changed inside one 150 ms window, and reading causes from event
+order is the heuristic class ADR 0003 rejects. First match wins:
 
-- `Connected(key)`: the desired device appeared in this scan ("<name> connected").
-- `Disconnected(key)`: the previous default is gone ("<name> disconnected").
-- `Corrected(key)`: something else took the role and usher put it back (trigger `DefaultChanged`, the taker
-  is the previous current; "<taker> took output; usher put it back").
-- `Ranked`: the list changed (trigger `Command`: no notice, history only).
-- `Launch` / `Rebind`: usher started or reconnected to coreaudiod.
+1. `Disconnected(key)`: the role's previous current device is not connected in `snap` ("<name> disconnected").
+2. `Connected(key)`: `desired` was not connected in `prev` and is in `snap` ("<name> connected").
+3. `Ranked`: the trigger is `Command` (the user changed the list in usher; history only, no notice).
+4. `Corrected(key)`: current ≠ desired and both were already connected; the taker is `snap`'s current
+   ("<taker> took output; usher put it back"). It names the device that holds the role, not who moved it.
+5. `Launch` / `Rebind`: the trigger is `Launch` or `Rebind` (history only, no notice).
 
-A reconcile that changes nothing makes no entry.
-
-When the 150 ms window merges several events into one reconcile, the trigger is chosen by precedence:
-`Command` > `DefaultChanged` > `DevicesChanged` (call: a change the user made in usher wins, so it never
-notifies).
+The trigger only tells `Command`, `Launch` and `Rebind` apart from device events; when the window merges a
+`Command` with device events, the trigger is `Command`. A reconcile that changes nothing makes no entry.
 
 ### 5.2 Notices
 
 - A macOS notification (the `tauri-plugin-notification` already used for the pause, v1 §5.4) for
-  `Switched` with `why` other than `Ranked`, for `Failed`, and for `Paused` (as today).
+  `Switched` with `why` `Disconnected`, `Connected` or `Corrected`, for `Failed`, and for `Paused` (as today).
+  `Ranked`, `Launch` and `Rebind` are history only, so login and a coreaudiod restart never notify.
+- At most one notice per role per 10 s; later entries in that window are history only (a fight with another
+  app makes one notice, then the loop guard's pause notice).
 - Output and input entries from one reconcile make **one** notice: title `usher`, body one line per role.
 - No notice while Auto-switch is off or paused (nothing switches then anyway).
 - A `Failed` caused by a user command shows in the panel as today and makes no notice (anti-goal).
 - `Paused` always notifies, whatever the setting (call: it is the v1 behaviour and stops switching).
 - Setting: **Notify when usher switches** (Settings › General), default **on** (owner). Stored as
   `State.notify_switches: bool` in `state.json`, default `true` for old files, changed by
-  `Command::SetNotify(bool)` through the engine, like `SetUpdateCheck` (ADR 0008 pattern).
+  `Command::SetNotify(bool)` through the engine, like `SetUpdateCheck` (ADR 0008 pattern). A serde default,
+  no `SCHEMA_VERSION` bump.
 - Permission: requested the first time a notice would show, as the pause does today. Denied: no notice,
   one `info` log line, history still records it.
 
@@ -124,7 +127,8 @@ notifies).
 
 ### 5.4 Diagnostics
 
-A snapshot built by the engine on request (`Event::Command`-style query with a reply, like v1 commands):
+A snapshot built by the engine on request: a new `Event::Diagnostics(reply)` variant with its own reply
+channel (the command `Reply` carries only `Result<(), Refusal>`). It contains:
 
 - per role: desired, current, and every ranked device with its skip reason (`Skip`: disconnected, not alive,
   hidden, no streams, never use);
@@ -133,14 +137,21 @@ A snapshot built by the engine on request (`Event::Command`-style query with a r
 - app version, macOS version, log path.
 
 **Copy diagnostics** puts a plain-text rendering on the clipboard, meant to be pasted into a public GitHub
-issue (owner). The renderer is a pure function and redacts:
+issue (owner). The Activity window shows exactly that text, so the user reads it before pasting. The
+renderer is a pure function and works as an **allowlist** for UIDs (keys and aliases use the same rendering):
 
-- Bluetooth addresses inside UIDs, to the last two bytes (`xx-xx-xx-xx-CF-9D:output`);
-- USB serials (the 4th field of `AppleUSBAudioEngine:<vendor>:<product>:<serial>:<n>`) when it is a serial;
-  for a serial-less device that field is the port location, which stays: it is what diagnostics debug;
-- personal names in device names: a leading `<name>'s ` / `<name>’s ` is dropped ("Matteo's AirPods Pro"
-  → "AirPods Pro");
-- the home folder in paths, shown as `~`.
+- built-in UIDs (`BuiltIn…`) as is;
+- `AppleUSBAudioEngine:<vendor>:<product>:<4th>:<n>`: vendor and product kept; the 4th field kept only when
+  the device is confirmed serial-less (then it is the port location, which diagnostics debug), otherwise
+  `<serial>`; an unresolved verdict counts as not confirmed;
+- the Bluetooth address shape `xx-xx-xx-xx-xx-xx:output|:input`, to the last two bytes
+  (`xx-xx-xx-xx-CF-9D:output`);
+- any other UID shape (display, AirPlay, network, aggregate, FireWire/Thunderbolt) becomes `uid#<n>`, an index
+  per report, the same index wherever that UID appears.
+
+It also drops a leading `<name>'s ` / `<name>’s ` from device names ("Matteo's AirPods Pro" → "AirPods Pro")
+and shows the home folder in paths as `~`. Other custom names stay; the on-screen preview is how the user
+catches them.
 
 Vendor and product are the names already in the UID; no new IOKit reads (call).
 
@@ -184,28 +195,45 @@ Vendor and product are the names already in the UID; no new IOKit reads (call).
 - New `AudioSystem` methods: `levels(role) -> Result<Level, AudioError>`,
   `set_volume(role, key, f32)`, `set_mute(role, key, bool)`. Writes resolve the key to an `AudioObjectID`
   at call time, as `set_default` does.
-- Listeners on the current default device of each role for volume and mute, re-registered on
-  `DefaultChanged(role)` and on rebind, under the existing generation counter (ADR 0006). They send a new
-  `AudioEvent::LevelChanged(role)`.
+- Listeners on the current default device of each role for volume and mute. This **amends ADR 0006** (four
+  listeners, all on the system object; no `AudioObjectID` outlives one call), in a new ADR (§9):
+  - the level listener holds the default device's `AudioObjectID` from registration to removal, and nothing
+    else does;
+  - on `DefaultChanged(role)`, `DevicesChanged` and rebind, the old listeners are removed first, then new
+    ones are added on the device that is now the default (the UID is translated again);
+  - removing a listener from a device that has vanished returns an error: it is logged at `debug` and
+    ignored;
+  - the existing generation counter drops callbacks from an older registration.
+  They send a new `AudioEvent::LevelChanged(role)`.
 
 ### 6.3 Engine and view
 
-- `Command::SetVolume { role, key, value }` and `Command::SetMute { role, key, on }`. If `key` is no longer
-  the role's default, the command is refused (`Refusal::Stale`), so a drag never moves the volume of a device
+- Volume and mute are **not** `usher_core::Command`s: `apply` is pure state, and `on_command` marks the
+  store dirty and schedules a reconcile. They are a new engine event, `Event::Level(LevelRequest, reply)`
+  with `LevelRequest::{Volume { role, key, value }, Mute { role, key, on }}`, handled directly by the engine:
+  no store write, no reconcile.
+- Gating as for commands: refused `NotReady` before the first scan and `Rebinding` during a rebind; a new
+  `Refusal::Stale` when `key` is no longer the role's default, so a drag never moves the volume of a device
   that just stopped being active.
+- A failed write logs a `warn`, re-reads the role's levels (the slider snaps back to the real value) and shows
+  `Couldn't set volume: <error>` (or mute) under that role's strip until the next successful change.
 - `LevelChanged(role)` reads that role's levels and emits the view at once, without a scan or the 150 ms
   coalescing window, so the slider echo feels immediate.
 - `PanelView` gains `levels: PerRole<Option<Level>>`, `Level { volume: Option<f32>, muted: Option<bool> }`
   (`None` = no control).
-- The panel throttles slider writes to one per 50 ms while dragging and always sends the final value.
+- The panel throttles slider writes to one per 50 ms while dragging (≤ 20 events/s on the engine channel)
+  and always sends the final value.
 
 ## 7. M8 Bluetooth
 
 ### 7.0 Spike summary
 
-Both features are worth it with caveats. The CoreAudio UID of a Bluetooth device is
-`<address with '-'>:output|:input`, which matches the address `system_profiler` prints (verified on this Mac).
-Battery data was not seen live (no headset connected during the spike); the owner will capture fixtures.
+Both features are worth it with caveats. The CoreAudio UID of a Bluetooth device has the shape
+`<address with '-'>:output|:input`: a key usher remembered in `state.json` while the Pixel Buds were
+connected matches the address `system_profiler` prints for them. It was not matched against a live device
+(none was connected during the spike), and battery data was not seen live; the entry gate below settles
+both. Line counts and "blocks for seconds" are estimates from other projects, and the private selectors
+were found by runtime introspection, not used.
 
 ### 7.0.1 M8 entry gate
 
@@ -227,8 +255,12 @@ The first M8 task settles what the spike could not verify, before any M8 code:
   (owner).
 - Pure parser in usher-core: JSON → `Vec<BtDevice { address, name, minor_type, connected, battery }>`.
   Matching to rows: normalise both addresses to 12 hex digits.
-- When: on panel open, every 60 s while the panel is open, and 3 s after a `DevicesChanged` that added a
-  Bluetooth device. Results reach the engine as `Event::Bluetooth(report)` and land in the view.
+- When: on panel open, every 60 s while the panel is open, and 3 s and 15 s after a `DevicesChanged` that
+  added a Bluetooth device (AirPods often report battery late). Results reach the engine as
+  `Event::Bluetooth(report)` and land in the view.
+- Failure (timeout, non-zero exit, unparsable JSON): the child is killed at the timeout, one `warn` per
+  failure streak, the last good report is dropped, so badges **and** Connect/Disconnect hide (paired state is
+  unknown). Switching is never affected.
 - Row badge for a connected Bluetooth row: `80%`, or `L 80 · R 75 · case 40` for buds. ≤ 20 % shows in the
   warning colour. No data: no badge.
 
@@ -237,25 +269,27 @@ The first M8 task settles what the spike could not verify, before any M8 code:
 - The `…` menu of a **remembered** Bluetooth row that is disconnected and paired (from the same report) gets
   **Connect**; a connected one gets **Disconnect** (owner). Paired devices usher has never seen are not
   listed (the lists stay the remembered devices, v1 §5.5).
-- `Command::Connect { key }` / `Command::Disconnect { key }`: the engine resolves the address from the UID
+- Like volume, these are engine events, not `usher_core::Command`s: `Event::Bluetooth` requests
+  `Connect { key }` / `Disconnect { key }`; the engine resolves the address from the UID
   and runs `openConnection` / `closeConnection` on a short-lived worker thread (the call blocks for seconds).
-- The row shows `Connecting…` for up to 10 s. Success is the device appearing in a scan; on timeout or error
-  the row shows `Couldn't connect <name>` (or the error). Connect does not select the device: the priority
+- The row shows `Connecting…` (or `Disconnecting…`) for up to 10 s. Success is the device appearing in a scan; on timeout or error
+  the row shows `Couldn't connect <name>` / `Couldn't disconnect <name>` (or the error). Disconnect succeeds
+  when the device leaves a scan. Connect does not select the device: the priority
   list decides, as for any device that appears. The engine owns the 10 s window (testable with the fake
   clock, call).
-- `unsafe` lives in `crates/usher-coreaudio/src/bluetooth.rs` (about 15 lines), using
+- `unsafe` lives in `crates/usher-coreaudio/src/bluetooth.rs` (about 15 lines, estimate), using
   `objc2-io-bluetooth` 0.3.2.
-- Permission: `NSBluetoothAlwaysUsageDescription` in `src-tauri/Info.plist` (without it the process aborts on
-  first IOBluetooth use). The prompt appears on the first Connect or Disconnect. Denied: the row error says
+- Permission: `NSBluetoothAlwaysUsageDescription` in `src-tauri/Info.plist` (third-party sources report that
+  without it the process aborts on first IOBluetooth use; the entry gate observes it). The prompt appears on the first Connect or Disconnect. Denied: the row error says
   to allow usher in System Settings › Privacy & Security › Bluetooth. A re-prompt after each update is
   accepted (§3).
 
 ## 8. Architecture changes
 
 - usher-core: `Entry`, `explain`, notice and diagnostics text renderers, redaction, `Level`, the Bluetooth
-  parser and address matcher, `SetNotify` / `SetVolume` / `SetMute` / `Connect` / `Disconnect` commands.
+  parser and address matcher, the `SetNotify` command.
 - usher-coreaudio: level reads, writes and listeners; `bluetooth.rs`.
-- src-tauri: engine trigger tracking, `Shell::activity`, `ActivityLog`, the Activity window, the Bluetooth
+- src-tauri: engine trigger tracking, `Event::Diagnostics`, `Event::Level`, the Bluetooth engine events, `Shell::activity`, `ActivityLog`, the Activity window, the Bluetooth
   poller, the tray's four icon images.
 - src: Activity page (`activity.html`), the panel level strip and battery badges, row menu items, Settings
   rows (Notify when usher switches, Open Activity…).
@@ -265,6 +299,7 @@ The first M8 task settles what the spike could not verify, before any M8 code:
 
 - **0011 v2 scope**: lifts the v1 non-goals for switch notices and history, a diagnostics UI, volume and mute,
   and Bluetooth connect and battery; records the non-goals that stay.
+- **0013 Level listeners** (with M7): amends ADR 0006's listener and `AudioObjectID` rule as §6.2 says.
 - **0012 Bluetooth**: `system_profiler` for battery and paired state, IOBluetooth for connect in
   `usher-coreaudio` (its `unsafe` scope widens to IOBluetooth), the permission and re-prompt trade-off.
 
