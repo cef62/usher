@@ -156,7 +156,7 @@ fn role_section(d: &Diagnostics, r: &RoleReport, red: &mut Redactor) -> String {
                 d.devices
                     .iter()
                     .find(|x| &x.key == k)
-                    .map(|x| (&x.name, x.serialless_usb))
+                    .map(|x| (&x.name, x.serialless_usb || x.family.is_some()))
             });
             let (name, serialless) =
                 known.map_or(("unknown device", false), |(n, s)| (n.as_str(), s));

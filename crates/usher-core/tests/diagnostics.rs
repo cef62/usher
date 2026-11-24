@@ -245,3 +245,32 @@ fn one_key_renders_the_same_in_ranked_and_devices_lines() {
     );
     assert!(!text.contains("<serial>"), "{text}");
 }
+
+#[test]
+fn current_key_outside_the_order_renders_like_its_devices_line() {
+    let k = "AppleUSBAudioEngine:Generic:USB Audio:14200000:1";
+    let mut state = State::default();
+    state.devices.insert(
+        key(k),
+        DeviceRecord {
+            name: "USB Audio".into(),
+            transport: Transport::Usb,
+            roles: Default::default(),
+            last_seen: None,
+            family: Some("AppleUSBAudioEngine:Generic:USB Audio".into()),
+        },
+    );
+    let snap = snap(vec![named(k, "USB Audio", Transport::Usb)], Some(k), None);
+    let d = diagnose(
+        &state,
+        &snap,
+        EngineStatus {
+            scanned: true,
+            ..Default::default()
+        },
+    );
+    let text = render_diagnostics(&d, "/h");
+    assert!(text.contains(&format!("current USB Audio ({k})")), "{text}");
+    assert!(text.contains(&format!("USB Audio · {k} ·")), "{text}");
+    assert!(!text.contains("<serial>"), "{text}");
+}
