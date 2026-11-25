@@ -59,7 +59,8 @@ export function LevelStrip({ role, row, level, error, setLevel }: Props) {
             e.currentTarget.focus(); // WebKit does not focus a range on click, so arrows would go nowhere
             clearTimeout(hold.current);
             drag.current = { key: row.key, value: null }; setLocal(shown); }}
-          onPointerUp={end} onPointerCancel={end}
+          // WebKit blurs the range right after pointerdown: focus again on release so arrows reach it
+          onPointerUp={(e) => { e.currentTarget.focus(); end(); }} onPointerCancel={end}
           onChange={(e) => {
             const pct = Number(e.target.value);
             setLocal(pct);

@@ -106,6 +106,14 @@ test("pointerdown does not capture the pointer and focuses the slider", () => {
   spy.mockRestore();
 });
 
+test("release focuses the slider again, since WebKit blurs it after pointerdown", () => {
+  const m = mount(strip({ volume: 0.5, muted: false }));
+  ev(slider(m.root), "pointerdown");
+  slider(m.root).blur();
+  ev(slider(m.root), "pointerup");
+  expect(document.activeElement).toBe(slider(m.root));
+});
+
 test("a pointercancel ends the drag and the view shows again", async () => {
   const m = mount(strip({ volume: 0.5, muted: false }));
   ev(slider(m.root), "pointerdown");
