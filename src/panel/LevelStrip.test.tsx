@@ -130,8 +130,8 @@ test("a keyboard step shows at once, then the view value after 300 ms or at once
   await act(() => vi.advanceTimersByTimeAsync(300));
   expect(slider(m.root).value).toBe("50");
   setValue(slider(m.root), "52");
-  m.rerender(strip({ volume: 0.52, muted: false }));
-  expect(slider(m.root).value).toBe("52");
+  m.rerender(strip({ volume: 0.6, muted: false }));
+  expect(slider(m.root).value).toBe("60");
 });
 
 test("a slider with no control has no valuetext", () => {
