@@ -35,16 +35,20 @@ export function LevelStrip({ role, row, level, error, setLevel }: Props) {
 
   return (
     <div className="strip" data-strip={role}>
-      <h2>{label}</h2>
-      <p className="strip-device">{row.name}</p>
+      <div className="strip-head">
+        <span className="strip-title">{label}</span>
+        <p className="strip-device">{row.name}</p>
+      </div>
       <div className="strip-line">
         <Glyph role={role} />
         <input
           type="range" min={0} max={100} step={1} value={shown} disabled={volume === null}
-          aria-label={`${label} volume`} aria-valuetext={`${shown}%`}
+          aria-label={`${label} volume`} aria-valuetext={volume === null ? undefined : `${shown}%`}
           style={{ "--fill": `${shown}%` } as React.CSSProperties}
-          onPointerDown={() => { drag.current = { key: row.key, value: null }; setLocal(shown); }}
-          onPointerUp={end} onPointerCancel={end}
+          onPointerDown={(e) => {
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* no capture: pointerup still ends the drag */ }
+            drag.current = { key: row.key, value: null }; setLocal(shown); }}
+          onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}
           onChange={(e) => {
             const pct = Number(e.target.value);
             if (drag.current) { drag.current.value = pct; setLocal(pct); }

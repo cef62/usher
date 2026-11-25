@@ -4,12 +4,12 @@ import { RoleList } from "./RoleList";
 import { READ_ONLY, pausedText } from "./text";
 
 export type Actions = { send(cmd: Command): Promise<boolean>; setLevel(req: LevelRequest): Promise<void>; hide(): void; openSettings(): void; openWhatsNew(): void; openActivity(): void; quit(): void };
-type Props = { view: View | null; error: string | null; now: number; actions: Actions };
+type Props = { view: View | null; error: string | null; now: number; actions: Actions; shown?: number };
 
 // React's types lack the `switch` attribute
 const SWITCH = { switch: "" } as object;
 
-export function PanelView({ view, error, now, actions }: Props) {
+export function PanelView({ view, error, now, actions, shown = 0 }: Props) {
   const footer = (
     <footer>
       {view?.debug && <span className="badge badge-debug">Debug</span>}
@@ -38,7 +38,7 @@ export function PanelView({ view, error, now, actions }: Props) {
       {view.readOnly && <p role="status" className="notice">{READ_ONLY}</p>}
       {(["output", "input"] as const).map((role) => {
         const active = view[role].find((r) => r.active);
-        return active && <LevelStrip key={role} role={role} row={active} level={view.levels[role]} error={view.levelErrors[role]} setLevel={actions.setLevel} />;
+        return active && <LevelStrip key={`${role}${shown}`} role={role} row={active} level={view.levels[role]} error={view.levelErrors[role]} setLevel={actions.setLevel} />;
       })}
       {(["output", "input"] as const).map((role) => (
         <section key={role}>

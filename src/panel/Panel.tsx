@@ -19,11 +19,13 @@ export function Panel() {
   const [view, setView] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [shown, setShown] = useState(0);
 
   useEffect(() => {
     const apply = (v: View) => { setView(v); setError(null); };
     const unlisten = [panelApi.onView(apply), panelApi.onShown(() => {
       setNow(Date.now());
+      setShown((n) => n + 1); // remounts the level strips: drops any drag held across a hide
       kbd(false);
       const el = document.querySelector<HTMLElement>('[data-role="output"] .row-main[tabindex="0"]') ?? document.querySelector<HTMLElement>('input[role="switch"]');
       el?.focus();
@@ -64,5 +66,5 @@ export function Panel() {
     openWhatsNew: () => void panelApi.openWhatsNew(),
     quit: () => void panelApi.quit(),
   };
-  return <PanelView view={view} error={error} now={now} actions={actions} />;
+  return <PanelView view={view} error={error} now={now} actions={actions} shown={shown} />;
 }

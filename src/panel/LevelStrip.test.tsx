@@ -71,3 +71,17 @@ test("shows the write error under the strip", () => {
   const { root } = mount(strip({ volume: 0.5, muted: false }, "k1", "Couldn't set volume: nope"));
   expect(root.querySelector('[role="alert"]')!.textContent).toBe("Couldn't set volume: nope");
 });
+
+test("a lost pointer capture ends the drag and the view shows again", () => {
+  const m = mount(strip({ volume: 0.5, muted: false }));
+  ev(slider(m.root), "pointerdown");
+  setValue(slider(m.root), "30");
+  ev(slider(m.root), "lostpointercapture");
+  m.rerender(strip({ volume: 0.9, muted: false }));
+  expect(slider(m.root).value).toBe("90");
+});
+
+test("a slider with no control has no valuetext", () => {
+  const { root } = mount(strip({ volume: null, muted: null }));
+  expect(slider(root).hasAttribute("aria-valuetext")).toBe(false);
+});
