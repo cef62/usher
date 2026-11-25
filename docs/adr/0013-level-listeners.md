@@ -60,7 +60,7 @@ Decisions the spec left open, or where this ADR departs from its text:
 4. **Refusals live only in the reply.** `Event::Level` is refused `NotReady` before the first scan,
    `Rebinding` during a rebind, and `Stale` when `key` is no longer the role's default (live read; a failed
    read counts as `Stale`). The panel shows nothing for a refusal; the reply is logged at `debug` once per
-   drag. A failed write replies `Ok` and shows `Couldn't set volume: <error>` (or mute) under the strip
+   run of the same refusal, until a write succeeds. A failed write replies `Ok` and shows `Couldn't set volume: <error>` (or mute) under the strip
    until the next successful write for that role or a change of that role's device. The engine re-reads the
    role's levels after every write and emits only when they changed. A level write never marks the store
    dirty, never schedules a reconcile and never changes which device is active.
@@ -70,7 +70,7 @@ Decisions the spec left open, or where this ADR departs from its text:
 - **The exception is narrow.** Only the level watch keeps an `AudioObjectID` across calls. If the device
   vanishes, the remove fails, is logged and ignored, and the next reconcile registers on the new default.
 - **The slider can lag by one reconcile.** After a default change, the new device's listeners are added
-  after the reconcile pass, within the 150 ms window plus the scan. `Stale` stops a write in that gap.
+  after the reconcile pass, within the 150 ms window plus the scan. A deferred USB recheck adds up to 500 ms. `Stale` stops a write in that gap.
 - **Some devices have no control.** HDMI displays and fixed-volume DACs show a disabled slider and
   `No volume control`.
 - **Tray.** The menu-bar icon shows a dot while the active input is muted. Four template images cover

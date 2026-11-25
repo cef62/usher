@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Level, LevelRequest, Role, Row } from "../types";
 import { pump } from "./pump";
 
@@ -21,15 +21,24 @@ export function LevelStrip({ role, row, level, error, setLevel }: Props) {
   // while the pointer is down: the key the drag started with and the local value
   const drag = useRef<{ key: string; value: number | null } | null>(null);
   const [local, setLocal] = useState<number | null>(null);
+  const hold = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const push = (key: string, pct: number) => volumePump.current!.push({ kind: "volume", role, key, value: pct / 100 });
   const end = () => {
     const d = drag.current;
     drag.current = null;
     if (d?.value != null) push(d.key, d.value);
-    setLocal(null);
+    // keep the local value until the view moves, or 300 ms pass: no jump back to the stale echo
+    clearTimeout(hold.current);
+    hold.current = setTimeout(() => setLocal(null), 300);
   };
   const volume = level?.volume ?? null;
+  useEffect(() => {
+    if (drag.current) return;
+    clearTimeout(hold.current);
+    setLocal(null);
+  }, [volume]);
+  useEffect(() => () => clearTimeout(hold.current), []);
   const shown = local ?? (volume === null ? 0 : Math.round(volume * 100));
   const muted = level?.muted ?? null;
 
@@ -47,6 +56,7 @@ export function LevelStrip({ role, row, level, error, setLevel }: Props) {
           style={{ "--fill": `${shown}%` } as React.CSSProperties}
           onPointerDown={(e) => {
             try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* no capture: pointerup still ends the drag */ }
+            clearTimeout(hold.current);
             drag.current = { key: row.key, value: null }; setLocal(shown); }}
           onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}
           onChange={(e) => {

@@ -64,7 +64,32 @@ test("ignores view echoes while dragging and shows them after release", async ()
   ev(slider(m.root), "pointerup");
   await act(() => vi.advanceTimersByTimeAsync(100));
   expect(sent.at(-1)).toEqual({ kind: "volume", role: "output", key: "k1", value: 0.3 });
+  await act(() => vi.advanceTimersByTimeAsync(200));
   expect(slider(m.root).value).toBe("90");
+});
+
+test("after release the local value holds until the view changes", async () => {
+  const m = mount(strip({ volume: 0.5, muted: false }));
+  ev(slider(m.root), "pointerdown");
+  setValue(slider(m.root), "30");
+  ev(slider(m.root), "pointerup");
+  await act(() => vi.advanceTimersByTimeAsync(299));
+  expect(slider(m.root).value).toBe("30");
+  m.rerender(strip({ volume: 0.3, muted: false }));
+  expect(slider(m.root).value).toBe("30");
+  m.rerender(strip({ volume: 0.8, muted: false }));
+  expect(slider(m.root).value).toBe("80");
+});
+
+test("after release an unchanged view shows after 300 ms", async () => {
+  const m = mount(strip({ volume: 0.5, muted: false }));
+  ev(slider(m.root), "pointerdown");
+  setValue(slider(m.root), "30");
+  ev(slider(m.root), "pointerup");
+  await act(() => vi.advanceTimersByTimeAsync(299));
+  expect(slider(m.root).value).toBe("30");
+  await act(() => vi.advanceTimersByTimeAsync(1));
+  expect(slider(m.root).value).toBe("50");
 });
 
 test("shows the write error under the strip", () => {
@@ -72,12 +97,17 @@ test("shows the write error under the strip", () => {
   expect(root.querySelector('[role="alert"]')!.textContent).toBe("Couldn't set volume: nope");
 });
 
-test("a lost pointer capture ends the drag and the view shows again", () => {
+test("a lost pointer capture ends the drag and the view shows again", async () => {
   const m = mount(strip({ volume: 0.5, muted: false }));
   ev(slider(m.root), "pointerdown");
   setValue(slider(m.root), "30");
   ev(slider(m.root), "lostpointercapture");
   m.rerender(strip({ volume: 0.9, muted: false }));
+  expect(slider(m.root).value).toBe("90");
+  ev(slider(m.root), "pointerdown");
+  setValue(slider(m.root), "20");
+  ev(slider(m.root), "lostpointercapture");
+  await act(() => vi.advanceTimersByTimeAsync(300));
   expect(slider(m.root).value).toBe("90");
 });
 

@@ -82,11 +82,11 @@ const keys = [
         <p>Under the Auto-switch header, the panel shows one strip for the active output and one for the active input.</p>
         <ul>
           <li>Each strip has a volume slider from 0 to 100 and a <strong>Mute</strong> button. A muted device shows the button pressed.</li>
-          <li>The strips follow the volume keys, Control Center and System Settings while the panel is open.</li>
+          <li>The strips follow the volume keys, Control Center and System Settings.</li>
           <li>A device with no volume control, such as an HDMI display or a fixed-volume DAC, shows a disabled slider and <strong>No volume control</strong>. A device with no mute control has no <strong>Mute</strong> button.</li>
           <li>Volume and mute never change which device is active. If the active device changes while you drag, the rest of the drag is dropped and the new device keeps its volume.</li>
           <li>While the active input is muted, the menu-bar icon has a dot, and its tooltip reads “usher: microphone muted” (“usher: auto-switch off, microphone muted” when Auto-switch is off).</li>
-          <li>If macOS refuses a change, the strip shows “Couldn't set volume: …” (or mute) until the next change works.</li>
+          <li>If macOS refuses a change, the strip shows “Couldn't set volume: …” (or mute) until the next change works or the active device changes.</li>
         </ul>
       </section>
 
