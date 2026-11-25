@@ -1,5 +1,11 @@
 # usher
 
+## 0.3.1
+
+### Patch Changes
+
+- 3e6c4be: Made Esc close the Settings and Activity windows.
+
 ## 0.3.0
 
 ### Minor Changes
