@@ -57,6 +57,7 @@ export function Panel() {
 
   const actions: Actions = {
     send: send(setError),
+    setLevel: (req) => panelApi.setLevel(req).catch(() => {}),
     hide: () => void panelApi.hide(),
     openSettings: () => void panelApi.openSettings(),
     openActivity: () => void panelApi.openActivity(),

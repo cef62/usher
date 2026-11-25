@@ -19,12 +19,13 @@ const v = (p: Partial<View> = {}): View => ({
   ],
   input: [row("mic-uid", "mic", 1, { active: true })],
   errors: { output: null, input: null }, update: null,
+  levels: { output: { volume: 0.5, muted: false }, input: { volume: 0.8, muted: false } }, levelErrors: { output: null, input: null },
   ...p,
 });
 let sent: Command[] = [];
 let opened = 0;
 let activityOpened = 0;
-const a: Actions = { send: async (c) => (sent.push(c), true), hide: () => {}, openSettings: () => {}, openWhatsNew: () => void (opened += 1), openActivity: () => void (activityOpened += 1), quit: () => {} };
+const a: Actions = { setLevel: async () => {}, send: async (c) => (sent.push(c), true), hide: () => {}, openSettings: () => {}, openWhatsNew: () => void (opened += 1), openActivity: () => void (activityOpened += 1), quit: () => {} };
 const ui = (view: View | null, error: string | null = null) => <PanelView view={view} error={error} now={now} actions={a} />;
 
 const rowButton = (r: Element, name: string) =>
@@ -165,4 +166,10 @@ test("footer order", () => {
   expect([...root.querySelectorAll("footer > button")].map((b) => b.textContent)).toEqual(["Update to usher 0.2.0…", "Activity…", "Settings…", "Quit"]);
   click(button(root, "Activity…"));
   expect(activityOpened).toBe(1);
+});
+
+test("renders a strip only for a role with an active row", () => {
+  const { root } = mount(ui(v({ input: [row("mic-uid", "mic", 1, { connected: false })] })));
+  expect(root.querySelector('[data-strip="output"]')).not.toBeNull();
+  expect(root.querySelector('[data-strip="input"]')).toBeNull();
 });

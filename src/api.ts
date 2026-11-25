@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
-import type { Command, SettingsView, View } from "./types";
+import type { Command, LevelRequest, SettingsView, View } from "./types";
 
 const PANEL_WIDTH = 360;
 const SETTINGS_WIDTH = 420;
@@ -12,6 +12,7 @@ export const panelApi = {
   onShown: (cb: () => void) => listen("panel-shown", () => cb()),
   // rejects with the Rust error string
   run: (cmd: Command) => invoke<void>("run_command", { cmd }),
+  setLevel: (req: LevelRequest) => invoke<void>("set_level", { req }),
   hide: () => invoke<void>("hide_panel"),
   openSettings: () => invoke<void>("open_settings"),
   openWhatsNew: () => invoke<void>("open_whatsnew"),
