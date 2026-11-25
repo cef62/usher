@@ -169,6 +169,8 @@ mod tests {
         PanelView {
             panel,
             errors: PerRole::default(),
+            levels: PerRole::default(),
+            level_errors: PerRole::default(),
             read_only: false,
             update: None,
         }

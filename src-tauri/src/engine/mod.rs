@@ -5,6 +5,7 @@
 mod activity;
 mod command;
 mod exec;
+mod level;
 mod rebind;
 mod thread;
 
@@ -18,8 +19,8 @@ use std::time::{Duration, Instant};
 use log::debug;
 use serde::Serialize;
 use usher_core::{
-    Command, Diagnostics, Entry, NoticeGate, PanelState, PausedReason, PerRole, Runtime, Snapshot,
-    State, Timestamp, Trigger, panel_state,
+    Command, Diagnostics, Entry, Level, LevelRequest, NoticeGate, PanelState, PausedReason,
+    PerRole, Runtime, Snapshot, State, Timestamp, Trigger, panel_state,
 };
 use usher_coreaudio::{AudioEvent, AudioSystem, Notify};
 
@@ -34,6 +35,8 @@ pub enum Event {
     ToggleAutoSwitch,
     /// Answered with the engine's own view; the shell fills `app`.
     Diagnostics(Sender<Diagnostics>),
+    /// A volume or mute write for a role's active device.
+    Level(LevelRequest, Option<Reply>),
     Quit(Sender<()>),
 }
 
@@ -58,6 +61,9 @@ pub struct PanelView {
     #[serde(flatten)]
     pub panel: PanelState,
     pub errors: PerRole<Option<String>>,
+    /// Live volume and mute of each role's active device; `None` when the read failed.
+    pub levels: PerRole<Option<Level>>,
+    pub level_errors: PerRole<Option<String>>,
     /// The state file is from a newer usher: changes are not saved.
     pub read_only: bool,
     /// The version waiting to install; set by the shell on publish, never by the engine.
@@ -87,6 +93,7 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     snap: Option<Snapshot>,
     seed_pending: bool,
     errors: PerRole<Option<String>>,
+    levels: level::Levels,
     reconcile_due: Option<Instant>,
     /// What woke the pending reconcile (merged); kept through a USB deferral and a scan retry.
     trigger: Option<Trigger>,
@@ -125,6 +132,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             snap: None,
             seed_pending,
             errors: PerRole::default(),
+            levels: level::Levels::default(),
             reconcile_due: None,
             trigger: Some(Trigger::Launch),
             notices: NoticeGate::default(),
@@ -158,6 +166,12 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 let _ = self.on_command(Command::SetAutoSwitch(on), now);
                 // the tray flipped its own check on click: say the truth on every path (dropped, no-op, rejected)
                 self.shell.auto_switch_changed(self.state.auto_switch);
+            }
+            Event::Level(req, reply) => {
+                let r = self.on_level(req);
+                if let Some(tx) = reply {
+                    let _ = tx.send(r);
+                }
             }
             Event::Diagnostics(tx) => {
                 let _ = tx.send(self.diagnostics());
@@ -228,6 +242,8 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         PanelView {
             panel: panel_state(&self.state, snap),
             errors: self.errors.clone(),
+            levels: self.levels.levels(),
+            level_errors: self.levels.errors(),
             read_only: !self.store.writable(),
             update: None,
         }
@@ -246,6 +262,10 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
     }
 
     fn on_audio(&mut self, ev: AudioEvent, now: Instant) {
+        if let AudioEvent::LevelChanged(role) = ev {
+            self.on_level_changed(role);
+            return;
+        }
         if ev == AudioEvent::ServiceRestarted {
             self.begin_rebind(now);
             return;
@@ -264,7 +284,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         }
         let trigger = match ev {
             AudioEvent::DefaultChanged(r) => Trigger::DefaultChanged(r),
-            _ => Trigger::DevicesChanged,
+            AudioEvent::DevicesChanged => Trigger::DevicesChanged,
+            // handled above and by the rebind branch
+            AudioEvent::LevelChanged(_) | AudioEvent::ServiceRestarted => return,
         };
         self.schedule_reconcile(now, trigger);
     }

@@ -62,6 +62,14 @@ fn failing(n: &mut u32, call: &'static str) -> Result<(), AudioError> {
     Ok(())
 }
 
+/// What the real binding reports for a missing control: `kAudioHardwareUnknownPropertyError`.
+fn no_control(call: &'static str) -> AudioError {
+    AudioError::Status {
+        call,
+        status: 0x7768_6f3f,
+    }
+}
+
 impl AudioSystem for Fake {
     fn scan(&self) -> Result<Scan, AudioError> {
         let mut w = self.world();
@@ -143,6 +151,9 @@ impl AudioSystem for Fake {
             .levels
             .get_mut(key)
             .ok_or_else(|| AudioError::NotFound(key.clone()))?;
+        if l.volume.is_none() {
+            return Err(no_control("set volume"));
+        }
         l.volume = Some(value);
         Ok(())
     }
@@ -161,6 +172,9 @@ impl AudioSystem for Fake {
             .levels
             .get_mut(key)
             .ok_or_else(|| AudioError::NotFound(key.clone()))?;
+        if l.muted.is_none() {
+            return Err(no_control("set mute"));
+        }
         l.muted = Some(on);
         Ok(())
     }

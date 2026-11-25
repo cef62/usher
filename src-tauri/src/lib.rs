@@ -102,6 +102,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             activity::get_diagnostics,
             commands::get_view,
             commands::run_command,
+            commands::set_level,
             panel::hide_panel,
             commands::open_settings,
             commands::quit,

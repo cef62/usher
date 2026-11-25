@@ -137,6 +137,10 @@ impl Listeners {
         }
     }
 
+    pub(crate) fn subscribed(&self) -> bool {
+        !self.added.is_empty()
+    }
+
     pub(crate) fn notify(&self) -> Option<&Notify> {
         self.notify.as_ref()
     }

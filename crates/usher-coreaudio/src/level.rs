@@ -6,7 +6,7 @@ use objc2_core_audio::{
 use usher_core::{DeviceKey, Level, Role, clamp_volume};
 
 use crate::AudioError;
-use crate::props::{get_f32, get_u32, has, set_f32, set_u32_in, settable};
+use crate::props::{get_f32, get_u32, has, set_f32, set_u32, settable};
 use crate::write::translate;
 
 /// `kAudioHardwareServiceDeviceProperty_VirtualMainVolume` ('vmvc'). objc2-core-audio omits it.
@@ -84,7 +84,7 @@ pub(crate) fn set_mute(role: Role, key: &DeviceKey, on: bool) -> Result<(), Audi
     if !has_mute(id, sc) {
         return Err(no_control("set mute"));
     }
-    set_u32_in(id, kAudioDevicePropertyMute, sc, u32::from(on))
+    set_u32(id, kAudioDevicePropertyMute, sc, u32::from(on))
 }
 
 /// Selectors worth a listener on this device: only the controls that exist.

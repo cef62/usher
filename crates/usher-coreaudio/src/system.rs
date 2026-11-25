@@ -30,6 +30,7 @@ impl AudioSystem for CoreAudioSystem {
         write::set_default(role, key)
     }
     fn subscribe(&mut self, notify: Notify) -> Result<(), AudioError> {
+        self.levels.clear_all();
         self.listeners.subscribe(notify)
     }
     fn unsubscribe(&mut self) {
@@ -57,10 +58,10 @@ impl AudioSystem for CoreAudioSystem {
         level::set_mute(role, key, on)
     }
     fn watch_levels(&mut self, role: Role, key: Option<&DeviceKey>) -> Result<(), AudioError> {
-        // not subscribed yet: no `Notify` to forward to
+        // not subscribed (or unsubscribed): nothing to forward to
         match self.listeners.notify() {
-            Some(n) => self.levels.watch(role, key, n),
-            None => Ok(()),
+            Some(n) if self.listeners.subscribed() => self.levels.watch(role, key, n),
+            _ => Ok(()),
         }
     }
 }

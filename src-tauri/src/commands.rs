@@ -3,7 +3,7 @@
 use log::info;
 use tauri::ipc::Invoke;
 use tauri::{AppHandle, Runtime, State};
-use usher_core::Command;
+use usher_core::{Command, LevelRequest};
 
 use crate::engine::{EngineHandle, PanelView, REQUEST_TIMEOUT};
 use crate::{activity, panel, settings, shell::LastView, whatsnew};
@@ -11,6 +11,7 @@ use crate::{activity, panel, settings, shell::LastView, whatsnew};
 pub const PANEL_COMMANDS: &[&str] = &[
     "get_view",
     "run_command",
+    "set_level",
     "hide_panel",
     "open_settings",
     "open_whatsnew",
@@ -78,6 +79,18 @@ pub async fn run_command(engine: State<'_, EngineHandle>, cmd: Command) -> Resul
 }
 
 #[tauri::command]
+pub async fn set_level(engine: State<'_, EngineHandle>, req: LevelRequest) -> Result<(), String> {
+    if !req.valid() {
+        return Err("invalid volume".into());
+    }
+    let engine = engine.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || engine.level(req, REQUEST_TIMEOUT))
+        .await
+        .map_err(|e| format!("usher could not run the command ({e})"))?
+        .map_err(|r| r.to_string())
+}
+
+#[tauri::command]
 pub fn open_settings(app: AppHandle) {
     settings::open(&app);
 }
@@ -117,5 +130,9 @@ mod tests {
         assert!(!allowed("activity", "open_activity") && !allowed("settings", "get_activity"));
         assert!(!allowed("panel", "whatsnew_install") && !allowed("", "quit"));
         assert!(!allowed("panel", "plugin:log|log"));
+        assert!(allowed("panel", "set_level"));
+        for other in ["settings", "whatsnew", "activity", ""] {
+            assert!(!allowed(other, "set_level"), "{other}");
+        }
     }
 }

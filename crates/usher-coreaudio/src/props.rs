@@ -124,16 +124,7 @@ fn set<T: Copy>(id: u32, selector: u32, scope: u32, value: T) -> Result<(), Audi
     check("AudioObjectSetPropertyData", st)
 }
 
-pub(crate) fn set_u32(id: u32, selector: u32, value: u32) -> Result<(), AudioError> {
-    set(
-        id,
-        selector,
-        objc2_core_audio::kAudioObjectPropertyScopeGlobal,
-        value,
-    )
-}
-
-pub(crate) fn set_u32_in(id: u32, selector: u32, scope: u32, value: u32) -> Result<(), AudioError> {
+pub(crate) fn set_u32(id: u32, selector: u32, scope: u32, value: u32) -> Result<(), AudioError> {
     set(id, selector, scope, value)
 }
 
