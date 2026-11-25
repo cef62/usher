@@ -8,7 +8,7 @@ use log::debug;
 use usher_coreaudio::{AudioSystem, Notify};
 
 use super::{Engine, Event, Flow, Refusal, Shell};
-use usher_core::Command;
+use usher_core::{Command, Diagnostics};
 
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -48,6 +48,18 @@ impl EngineHandle {
             Err(RecvTimeoutError::Timeout) => Err(Refusal::NoAnswer),
             Err(RecvTimeoutError::Disconnected) => Err(Refusal::Gone),
         }
+    }
+
+    /// Ask the engine for its diagnostics; the app fields are empty.
+    pub fn diagnostics(&self, timeout: Duration) -> Result<Diagnostics, Refusal> {
+        let (tx, rx) = mpsc::channel();
+        if !self.send(Event::Diagnostics(tx)) {
+            return Err(Refusal::Gone);
+        }
+        rx.recv_timeout(timeout).map_err(|e| match e {
+            RecvTimeoutError::Timeout => Refusal::NoAnswer,
+            RecvTimeoutError::Disconnected => Refusal::Gone,
+        })
     }
 
     /// Ask the engine to flush and stop; `true` once it acknowledged within `timeout`.

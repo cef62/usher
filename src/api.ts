@@ -15,6 +15,7 @@ export const panelApi = {
   hide: () => invoke<void>("hide_panel"),
   openSettings: () => invoke<void>("open_settings"),
   openWhatsNew: () => invoke<void>("open_whatsnew"),
+  openActivity: () => invoke<void>("open_activity"),
   quit: () => invoke<void>("quit"),
   fit: (contentHeight: number) => getCurrentWindow().setSize(new LogicalSize(PANEL_WIDTH, contentHeight)),
 };
@@ -24,10 +25,12 @@ export const settingsApi = {
   setLogin: (on: boolean) => invoke<boolean>("set_login", { enabled: on }),
   setDebug: (on: boolean) => invoke<void>("set_debug", { on }),
   setUpdateCheck: (on: boolean) => invoke<void>("set_update_check", { on }),
+  setNotify: (on: boolean) => invoke<void>("set_notify", { on }),
   checkNow: () => invoke<{ version: string } | null>("check_update"),
   // the daily check and the panel publish the pending version with every view
   onUpdate: (cb: (version: string | null) => void) => listen<View>("state-changed", (e) => cb(e.payload.update)),
   openWhatsNew: () => invoke<void>("open_whatsnew"),
+  openActivity: () => invoke<void>("open_activity"),
   fit: (contentHeight: number) => getCurrentWindow().setSize(new LogicalSize(SETTINGS_WIDTH, contentHeight)),
   revealLog: () => invoke<void>("reveal_log"),
 };

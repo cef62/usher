@@ -2,6 +2,7 @@
 //! actions run against the `AudioSystem`, and a `Shell` hears about every visible change. No clock of its own:
 //! every entry point takes `now`, so tests drive time by hand.
 
+mod activity;
 mod command;
 mod exec;
 mod rebind;
@@ -17,7 +18,8 @@ use std::time::{Duration, Instant};
 use log::debug;
 use serde::Serialize;
 use usher_core::{
-    Command, PanelState, PausedReason, PerRole, Runtime, Snapshot, State, Timestamp, panel_state,
+    Command, Diagnostics, Entry, NoticeGate, PanelState, PausedReason, PerRole, Runtime, Snapshot,
+    State, Timestamp, Trigger, panel_state,
 };
 use usher_coreaudio::{AudioEvent, AudioSystem, Notify};
 
@@ -30,6 +32,8 @@ pub enum Event {
     Audio(AudioEvent),
     Command(Command, Option<Reply>),
     ToggleAutoSwitch,
+    /// Answered with the engine's own view; the shell fills `app`.
+    Diagnostics(Sender<Diagnostics>),
     Quit(Sender<()>),
 }
 
@@ -44,6 +48,8 @@ pub trait Shell {
     fn auto_switch_changed(&self, on: bool);
     fn paused(&self, reason: &PausedReason);
     fn debug_changed(&self, on: bool);
+    fn activity(&self, entry: &Entry);
+    fn notice(&self, body: &str);
 }
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
@@ -82,9 +88,14 @@ pub struct Engine<A: AudioSystem, S: Shell> {
     seed_pending: bool,
     errors: PerRole<Option<String>>,
     reconcile_due: Option<Instant>,
+    /// What woke the pending reconcile (merged); kept through a USB deferral and a scan retry.
+    trigger: Option<Trigger>,
+    notices: NoticeGate,
     usb_due: Option<Instant>,
     /// A recheck ran since the last device event: do not schedule another.
     usb_rechecked: bool,
+    /// The last scan could not tell a serial-less USB device from a moved one.
+    usb_unresolved: bool,
     notify: Notify,
     subscribed: bool,
     rebind_due: Option<Instant>,
@@ -115,14 +126,18 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             seed_pending,
             errors: PerRole::default(),
             reconcile_due: None,
+            trigger: Some(Trigger::Launch),
+            notices: NoticeGate::default(),
             usb_due: None,
             usb_rechecked: false,
+            usb_unresolved: false,
             notify,
             subscribed: false,
             rebind_due: None,
             rebind_attempt: 0,
             restarted: false,
         };
+        e.notices.quiet_from(e.clock.wall(now));
         e.attempt_bind(now);
         e.shell.auto_switch_changed(e.state.auto_switch);
         e.emit();
@@ -143,6 +158,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 let _ = self.on_command(Command::SetAutoSwitch(on), now);
                 // the tray flipped its own check on click: say the truth on every path (dropped, no-op, rejected)
                 self.shell.auto_switch_changed(self.state.auto_switch);
+            }
+            Event::Diagnostics(tx) => {
+                let _ = tx.send(self.diagnostics());
             }
             Event::Quit(done) => {
                 self.shutdown();
@@ -219,7 +237,8 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         self.shell.state_changed(&self.view());
     }
 
-    fn schedule_reconcile(&mut self, now: Instant) {
+    fn schedule_reconcile(&mut self, now: Instant, trigger: Trigger) {
+        self.trigger = Some(self.trigger.map_or(trigger, |t| t.merge(trigger)));
         if self.rebind_due.is_some() {
             return;
         }
@@ -243,6 +262,10 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         if ev == AudioEvent::DevicesChanged {
             self.usb_rechecked = false;
         }
-        self.schedule_reconcile(now);
+        let trigger = match ev {
+            AudioEvent::DefaultChanged(r) => Trigger::DefaultChanged(r),
+            _ => Trigger::DevicesChanged,
+        };
+        self.schedule_reconcile(now, trigger);
     }
 }

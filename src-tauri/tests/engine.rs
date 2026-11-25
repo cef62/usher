@@ -1,16 +1,8 @@
 mod common;
 use common::*;
-use usher_core::{DeviceKey, Role, State};
+use usher_core::Role;
 use usher_coreaudio::{AudioError, AudioEvent};
 use usher_lib::engine::{Event, Flow};
-
-fn ranked(out: &[&str]) -> State {
-    let mut s = State::default();
-    // mic ranks first so a newly seen AirPods never takes the input
-    s.input.order = vec!["BuiltInMicrophoneDevice".into()];
-    s.output.order = out.iter().map(|k| DeviceKey::from(*k)).collect();
-    s
-}
 
 fn trio() -> Fake {
     Fake::with(

@@ -1,0 +1,58 @@
+/* Activity: the Settings window's sheet (settings.css) plus the parts only this window has. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+main {
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-user-select: text; /* lines and the report can be selected */
+  user-select: text;
+}
+
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lines .row {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.time {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+details {
+  margin-top: 16px;
+}
+
+summary {
+  font-weight: 600;
+  cursor: default;
+}
+
+pre {
+  margin: 8px 0;
+  padding: 8px 10px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 11px ui-monospace, Menlo, monospace;
+  background: var(--group);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -318,6 +318,10 @@ fn panel_json_rejects_unknown_and_malformed_input() {
         p(r#"{"kind":"setDebug","args":true}"#).unwrap(),
         Command::SetDebug(true)
     );
+    assert_eq!(
+        p(r#"{"kind":"setNotify","args":false}"#).unwrap(),
+        Command::SetNotify(false)
+    );
     assert!(p(r#"{"kind":"forget","args":{"key":"k","x":1}}"#).is_err());
     assert!(p(r#"{"kind":"forget"}"#).is_err());
     assert!(p(r#"{"kind":"setAutoSwitch","args":"x"}"#).is_err());
@@ -346,4 +350,27 @@ fn a_file_without_update_check_reads_on() {
         ..State::default()
     };
     assert!(!usher_core::from_json(&to_json(&off)).unwrap().update_check);
+}
+
+#[test]
+fn set_notify_reports_a_change_once() {
+    let mut s = State::default();
+    assert_eq!(run(&mut s, &[], Command::SetNotify(false)), Ok(true));
+    assert_eq!(run(&mut s, &[], Command::SetNotify(false)), Ok(false));
+    assert!(!usher_core::panel_state(&s, &snap(vec![], None, None)).notify_switches);
+}
+
+#[test]
+fn a_file_without_notify_switches_reads_on() {
+    let s = usher_core::from_json(r#"{"schema_version":1}"#).unwrap();
+    assert!(s.notify_switches);
+    let off = State {
+        notify_switches: false,
+        ..State::default()
+    };
+    assert!(
+        !usher_core::from_json(&to_json(&off))
+            .unwrap()
+            .notify_switches
+    );
 }

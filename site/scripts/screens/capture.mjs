@@ -39,7 +39,7 @@ for (const scheme of ['light', 'dark']) {
   }
 
   // settings and what's new: capture the page at the real window size, then wrap it in a window frame
-  for (const [name, page, w, h0, title] of [['settings', 'settings.html', 420, null, 'Settings'], ['whatsnew', 'whatsnew.html', 520, 560, "What's new"]]) {
+  for (const [name, page, w, h0, title] of [['settings', 'settings.html', 420, null, 'Settings'], ['whatsnew', 'whatsnew.html', 520, 560, "What's new"], ['activity', 'activity.html', 480, 560, 'usher Activity']]) {
     const c2 = await browser.newContext({ colorScheme: scheme, deviceScaleFactor: 2, viewport: { width: w, height: h0 ?? 900 } });
     await c2.addInitScript(mock);
     const s = await c2.newPage();
@@ -48,6 +48,7 @@ for (const scheme of ['light', 'dark']) {
     await s.addStyleTag({ content: `html{background:${dark ? '#26262a' : '#f2f2f5'}!important}` });
     await s.addStyleTag({ content: SWITCH(dark) });
     await s.waitForSelector('h1, h2');
+    if (name === 'activity') { await s.locator('summary').click(); await s.locator('pre', { hasText: 'usher 0.2.0' }).waitFor(); }
     await s.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await s.waitForTimeout(800);
     const h = h0 ?? Math.ceil((await s.locator('main').boundingBox()).y + (await s.locator('main').boundingBox()).height) + 8;

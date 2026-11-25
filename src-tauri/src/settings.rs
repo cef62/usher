@@ -21,6 +21,7 @@ pub struct SettingsView {
     pub login_refusal: Option<String>,
     pub debug: bool,
     pub update_check: bool,
+    pub notify_switches: bool,
     /// The version waiting to install, if a check found one.
     pub update: Option<String>,
     pub version: String,
@@ -66,6 +67,7 @@ pub fn get_settings(app: AppHandle) -> SettingsView {
         login_refusal: login::refusal().map(Into::into),
         debug,
         update_check,
+        notify_switches: last.as_ref().is_none_or(|v| v.panel.notify_switches),
         update: update::pending(&app),
         version: app.package_info().version.to_string(),
     }
@@ -79,6 +81,11 @@ pub async fn set_debug(engine: State<'_, EngineHandle>, on: bool) -> Result<(), 
 #[tauri::command]
 pub async fn set_update_check(engine: State<'_, EngineHandle>, on: bool) -> Result<(), String> {
     commands::request(&engine, Command::SetUpdateCheck(on)).await
+}
+
+#[tauri::command]
+pub async fn set_notify(engine: State<'_, EngineHandle>, on: bool) -> Result<(), String> {
+    commands::request(&engine, Command::SetNotify(on)).await
 }
 
 /// `open -R <log>` selects the file; a missing log opens the folder.

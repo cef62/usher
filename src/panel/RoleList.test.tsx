@@ -95,12 +95,12 @@ test("a view that arrives mid-drag is used for the drop", async () => {
 });
 
 test("a refused command shows its text and the rows go back to the engine's order", async () => {
-  const view = { autoSwitch: true, debug: false, paused: null, readOnly: false, update: null, input: [], errors: { output: null, input: null }, output: abc() };
+  const view = { autoSwitch: true, debug: false, notifySwitches: true, paused: null, readOnly: false, update: null, input: [], errors: { output: null, input: null }, output: abc() };
   const Harness = () => {
     const [error, setError] = useState<string | null>(null);
     const actions = {
       send: async () => { setError("the output list changed; reload and retry"); return false; },
-      hide() {}, openSettings() {}, openWhatsNew() {}, quit() {},
+      hide() {}, openSettings() {}, openWhatsNew() {}, openActivity() {}, quit() {},
     };
     return <PanelView view={view} error={error} now={now} actions={actions} />;
   };

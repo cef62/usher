@@ -5,11 +5,11 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use usher_core::{
-    DeviceKey, DeviceSnapshot, PausedReason, PerRole, Role, Snapshot, State, Timestamp, Transport,
-    from_json, to_json,
+    Command, DeviceKey, DeviceSnapshot, Entry, PausedReason, PerRole, Role, Snapshot, State,
+    Timestamp, Transport, from_json, to_json,
 };
 use usher_coreaudio::{AudioError, AudioSystem, Notify, Scan};
-use usher_lib::engine::{Clock, Engine, PanelView, Shell};
+use usher_lib::engine::{Clock, Engine, Event, PanelView, Refusal, Shell};
 use usher_lib::store::Store;
 
 #[derive(Default)]
@@ -112,6 +112,8 @@ pub enum Call {
     Auto(bool),
     Paused(PausedReason),
     Debug(bool),
+    Activity(Entry),
+    Notice(String),
 }
 
 #[derive(Clone, Default)]
@@ -120,6 +122,26 @@ pub struct Recorder(Arc<Mutex<Vec<Call>>>);
 impl Recorder {
     pub fn calls(&self) -> Vec<Call> {
         self.0.lock().unwrap().clone()
+    }
+
+    pub fn entries(&self) -> Vec<Entry> {
+        self.calls()
+            .into_iter()
+            .filter_map(|c| match c {
+                Call::Activity(e) => Some(e),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn notices(&self) -> Vec<String> {
+        self.calls()
+            .into_iter()
+            .filter_map(|c| match c {
+                Call::Notice(b) => Some(b),
+                _ => None,
+            })
+            .collect()
     }
 
     pub fn last_paused(&self) -> Option<PausedReason> {
@@ -142,6 +164,12 @@ impl Shell for Recorder {
     }
     fn paused(&self, reason: &PausedReason) {
         self.0.lock().unwrap().push(Call::Paused(reason.clone()));
+    }
+    fn activity(&self, entry: &Entry) {
+        self.0.lock().unwrap().push(Call::Activity(entry.clone()));
+    }
+    fn notice(&self, body: &str) {
+        self.0.lock().unwrap().push(Call::Notice(body.into()));
     }
 }
 
@@ -178,6 +206,24 @@ pub fn mic() -> DeviceSnapshot {
         1,
         0,
     )
+}
+
+pub fn disp() -> DeviceSnapshot {
+    dev("DisplayUID", "Studio Display", Transport::Hdmi, 0, 2)
+}
+
+pub fn ranked(out: &[&str]) -> State {
+    let mut s = State::default();
+    // mic ranks first so a newly seen AirPods never takes the input
+    s.input.order = vec!["BuiltInMicrophoneDevice".into()];
+    s.output.order = out.iter().map(|k| DeviceKey::from(*k)).collect();
+    s
+}
+
+pub fn ask(e: &mut Engine<Fake, Recorder>, cmd: Command, t: u64) -> Result<(), Refusal> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    e.handle(Event::Command(cmd, Some(tx)), at(t));
+    rx.try_recv().unwrap()
 }
 
 pub fn at(ms: u64) -> Instant {

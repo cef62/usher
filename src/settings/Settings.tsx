@@ -32,6 +32,20 @@ export function SettingsPage({ initial, api }: { initial: SettingsView; api: typ
           />
         </label>
         {note && <p className="row note">{note}</p>}
+        <label className="row">
+          Notify when usher switches
+          <input
+            type="checkbox"
+            // @ts-expect-error see above
+            switch=""
+            checked={view.notifySwitches}
+            onChange={(e) => {
+              const on = e.target.checked;
+              void run(async () => (await api.setNotify(on), setView({ ...view, notifySwitches: on })));
+            }}
+          />
+        </label>
+        <p className="row note">usher always tells you when it pauses Auto-switch.</p>
       </div>
       <Updates
         view={view}
@@ -56,6 +70,7 @@ export function SettingsPage({ initial, api }: { initial: SettingsView; api: typ
         </label>
         <p className="row note">Adds detail to the log. The panel shows a Debug badge while it is on.</p>
         <div className="row end">
+          <button type="button" onClick={() => run(api.openActivity)}>Open Activity…</button>
           <button type="button" onClick={() => run(api.revealLog)}>Show log in Finder</button>
         </div>
       </div>

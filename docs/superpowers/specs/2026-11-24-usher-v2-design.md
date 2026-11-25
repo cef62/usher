@@ -108,6 +108,7 @@ The trigger only tells `Command`, `Launch` and `Rebind` apart from device events
   `Ranked`, `Launch` and `Rebind` are history only, so login and a coreaudiod restart never notify.
 - At most one notice per role per 10 s; later entries in that window are history only (a fight with another
   app makes one notice, then the loop guard's pause notice).
+- No notice for 10 s after launch and after a coreaudiod rebind completes (devices settle then); those entries stay in history and the log. Paused still notifies.
 - Output and input entries from one reconcile make **one** notice: title `usher`, body one line per role.
 - No notice while Auto-switch is off or paused (nothing switches then anyway).
 - A `Failed` caused by a user command shows in the panel as today and makes no notice (anti-goal).

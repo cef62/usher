@@ -1,6 +1,11 @@
 use crate::{DeviceKey, Reason, Role, Skip, Skipped, Snapshot, State};
 
-fn skip_cause(state: &State, snap: &Snapshot, role: Role, key: &DeviceKey) -> Option<Skip> {
+pub(crate) fn skip_cause(
+    state: &State,
+    snap: &Snapshot,
+    role: Role,
+    key: &DeviceKey,
+) -> Option<Skip> {
     let Some(dev) = snap.device(key) else {
         return Some(Skip::Disconnected);
     };

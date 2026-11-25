@@ -58,7 +58,11 @@ pub fn anchor(icon: Frame, screen: Frame, width: f64) -> (f64, f64) {
 }
 
 /// Windows that keep the app shown when the panel hides.
-pub const KEEP_FOCUS: [&str; 2] = [crate::settings::LABEL, crate::whatsnew::LABEL];
+pub const KEEP_FOCUS: [&str; 3] = [
+    crate::settings::LABEL,
+    crate::whatsnew::LABEL,
+    crate::activity::LABEL,
+];
 
 pub fn other_window_visible(visible: impl Fn(&str) -> bool) -> bool {
     KEEP_FOCUS.iter().any(|l| visible(l))
@@ -144,10 +148,11 @@ mod tests {
         assert_eq!((icon.x, screen), (1450., f(0., 0., 1512., 982.)));
     }
     #[test]
-    fn other_window_visible_counts_settings_and_whatsnew() {
+    fn other_window_visible_counts_every_keep_focus_window() {
         assert!(!other_window_visible(|_| false));
         assert!(other_window_visible(|l| l == "settings"));
         assert!(other_window_visible(|l| l == "whatsnew"));
+        assert!(other_window_visible(|l| l == "activity"));
         assert!(!other_window_visible(|l| l == "panel"));
     }
 }
