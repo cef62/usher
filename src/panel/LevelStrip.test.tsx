@@ -97,18 +97,33 @@ test("shows the write error under the strip", () => {
   expect(root.querySelector('[role="alert"]')!.textContent).toBe("Couldn't set volume: nope");
 });
 
-test("a lost pointer capture ends the drag and the view shows again", async () => {
+test("pointerdown does not capture the pointer and focuses the slider", () => {
+  const spy = vi.spyOn(HTMLElement.prototype, "setPointerCapture").mockImplementation(() => {});
+  const m = mount(strip({ volume: 0.5, muted: false }));
+  ev(slider(m.root), "pointerdown");
+  expect(spy).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(slider(m.root));
+  spy.mockRestore();
+});
+
+test("a pointercancel ends the drag and the view shows again", async () => {
   const m = mount(strip({ volume: 0.5, muted: false }));
   ev(slider(m.root), "pointerdown");
   setValue(slider(m.root), "30");
-  ev(slider(m.root), "lostpointercapture");
+  ev(slider(m.root), "pointercancel");
   m.rerender(strip({ volume: 0.9, muted: false }));
   expect(slider(m.root).value).toBe("90");
-  ev(slider(m.root), "pointerdown");
-  setValue(slider(m.root), "20");
-  ev(slider(m.root), "lostpointercapture");
+});
+
+test("a keyboard step shows at once, then the view value after 300 ms or at once on an echo", async () => {
+  const m = mount(strip({ volume: 0.5, muted: false }));
+  setValue(slider(m.root), "51");
+  expect(slider(m.root).value).toBe("51");
   await act(() => vi.advanceTimersByTimeAsync(300));
-  expect(slider(m.root).value).toBe("90");
+  expect(slider(m.root).value).toBe("50");
+  setValue(slider(m.root), "52");
+  m.rerender(strip({ volume: 0.52, muted: false }));
+  expect(slider(m.root).value).toBe("52");
 });
 
 test("a slider with no control has no valuetext", () => {

@@ -55,13 +55,16 @@ export function LevelStrip({ role, row, level, error, setLevel }: Props) {
           aria-label={`${label} volume`} aria-valuetext={volume === null ? undefined : `${shown}%`}
           style={{ "--fill": `${shown}%` } as React.CSSProperties}
           onPointerDown={(e) => {
-            try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* no capture: pointerup still ends the drag */ }
+            // no setPointerCapture: it stops WebKit's native range drag from firing input; WebKit still delivers pointerup
+            e.currentTarget.focus(); // WebKit does not focus a range on click, so arrows would go nowhere
             clearTimeout(hold.current);
             drag.current = { key: row.key, value: null }; setLocal(shown); }}
-          onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}
+          onPointerUp={end} onPointerCancel={end}
           onChange={(e) => {
             const pct = Number(e.target.value);
-            if (drag.current) { drag.current.value = pct; setLocal(pct); }
+            setLocal(pct);
+            if (drag.current) drag.current.value = pct;
+            else { clearTimeout(hold.current); hold.current = setTimeout(() => setLocal(null), 300); }
             push(drag.current?.key ?? row.key, pct);
           }}
         />
