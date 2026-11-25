@@ -57,8 +57,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
                 debug!("level request refused: {why}");
                 self.levels.refused = Some(why.clone());
             }
-            Ok(()) => self.levels.refused = None,
-            Err(_) => {}
+            _ => {}
         }
         r
     }
@@ -118,6 +117,9 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
         let error = done
             .err()
             .map(|e| self.write_failed(role, what, &name, key, &e));
+        if error.is_none() {
+            self.levels.refused = None;
+        }
         let was = std::mem::replace(self.levels.errors.get_mut(role), error);
         if self.read_levels(role) | (was != *self.levels.errors.get(role)) {
             self.emit();

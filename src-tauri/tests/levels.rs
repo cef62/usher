@@ -135,13 +135,14 @@ fn a_failed_write_shows_the_error_until_the_next_success() {
         call: "set volume",
         status: -50,
     });
+    fake.world().levels.insert(SPK.into(), lv(0.55));
     assert_eq!(level(&mut e, vol(0.3), 10), Ok(()));
     let v = last_view(&rec);
     assert_eq!(
         v.level_errors.output.as_deref(),
         Some("Couldn't set volume: set volume failed (OSStatus -50)")
     );
-    assert_eq!(v.levels.output, Some(lv(0.5)));
+    assert_eq!(v.levels.output, Some(lv(0.55)));
     fake.world().fail_level = None;
     assert_eq!(level(&mut e, vol(0.3), 20), Ok(()));
     assert_eq!(last_view(&rec).level_errors.output, None);
@@ -209,11 +210,87 @@ fn watches_follow_every_reconcile() {
 }
 
 #[test]
-fn auto_switch_off_still_sets_levels() {
+fn auto_switch_off_paused_or_read_only_still_sets_levels() {
     let d = tempfile::tempdir().unwrap();
     let fake = world();
     let (mut e, _) = boot(fake.clone(), d.path());
     assert_eq!(ask(&mut e, Command::SetAutoSwitch(false), 10), Ok(()));
     assert_eq!(level(&mut e, vol(0.2), 20), Ok(()));
     assert_eq!(fake.world().level_writes, vec![vol(0.2)]);
+
+    // read-only store
+    let d = tempfile::tempdir().unwrap();
+    std::fs::write(d.path().join("state.json"), r#"{"schema_version":2}"#).unwrap();
+    let fake = world();
+    let (mut e, _) = boot(fake.clone(), d.path());
+    assert!(e.view().read_only);
+    assert_eq!(level(&mut e, vol(0.3), 10), Ok(()));
+    assert_eq!(fake.world().level_writes, vec![vol(0.3)]);
+
+    // paused by the loop guard
+    let d = tempfile::tempdir().unwrap();
+    state_file(d.path(), &ranked(&[SPK, "AirPods-uid"]));
+    let fake = world();
+    fake.world().current.output = Some("AirPods-uid".into());
+    fake.world().sticky.output = Some("AirPods-uid".into());
+    fake.world().levels.insert("AirPods-uid".into(), lv(0.6));
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    for t in [200, 500] {
+        e.handle(
+            Event::Audio(AudioEvent::DefaultChanged(Role::Output)),
+            at(t),
+        );
+        e.tick(at(t + 150));
+    }
+    assert!(rec.last_paused().is_some());
+    let req = LevelRequest::Volume {
+        role: Role::Output,
+        key: "AirPods-uid".into(),
+        value: 0.7,
+    };
+    assert_eq!(level(&mut e, req.clone(), 1_000), Ok(()));
+    assert_eq!(fake.world().level_writes, vec![req]);
+}
+
+#[test]
+fn level_changed_before_the_first_scan_or_during_a_rebind_is_ignored() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = world();
+    fake.world().fail_scan = 1;
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    let (n, scans) = (views(&rec), fake.world().scans);
+    e.handle(Event::Audio(AudioEvent::LevelChanged(Role::Output)), at(10));
+    assert_eq!((views(&rec), fake.world().scans), (n, scans));
+
+    let d = tempfile::tempdir().unwrap();
+    let fake = world();
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    e.handle(Event::Audio(AudioEvent::ServiceRestarted), at(10));
+    fake.world().levels.insert(SPK.into(), lv(0.9));
+    let (n, scans) = (views(&rec), fake.world().scans);
+    e.handle(Event::Audio(AudioEvent::LevelChanged(Role::Output)), at(11));
+    assert_eq!((views(&rec), fake.world().scans), (n, scans));
+}
+
+#[test]
+fn a_new_current_device_clears_the_level_error() {
+    let d = tempfile::tempdir().unwrap();
+    let fake = world();
+    let (mut e, rec) = boot(fake.clone(), d.path());
+    fake.world().fail_level = Some(AudioError::Status {
+        call: "set volume",
+        status: -50,
+    });
+    assert_eq!(level(&mut e, vol(0.3), 10), Ok(()));
+    assert!(last_view(&rec).level_errors.output.is_some());
+    fake.world().current.output = Some("AirPods-uid".into());
+    fake.world().levels.insert("AirPods-uid".into(), lv(0.6));
+    e.handle(
+        Event::Audio(AudioEvent::DefaultChanged(Role::Output)),
+        at(20),
+    );
+    e.tick(at(200));
+    let v = last_view(&rec);
+    assert_eq!(v.level_errors.output, None);
+    assert_eq!(v.levels.output, Some(lv(0.6)));
 }
