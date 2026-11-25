@@ -1,7 +1,7 @@
 import * as sink from "@tauri-apps/plugin-log";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { settingsApi } from "../api";
+import { closeOnEscape, settingsApi } from "../api";
 import { forwardConsole } from "../log";
 import type { SettingsView } from "../types";
 import { SettingsPage } from "./Settings";
@@ -9,6 +9,7 @@ import { fitHeight } from "../panel/logic";
 import "./settings.css";
 
 forwardConsole(console, sink);
+closeOnEscape();
 
 // each load remounts the page, so the OS login state is re-read when the window regains focus
 function App() {

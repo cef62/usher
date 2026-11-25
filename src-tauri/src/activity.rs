@@ -200,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn capability_grants_log_listen_and_drag() {
+    fn capability_grants_log_listen_drag_and_close() {
         let cap: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/activity.json")).unwrap();
         assert_eq!(cap["windows"], serde_json::json!([LABEL]));
@@ -211,7 +211,9 @@ mod tests {
                 "core:event:allow-listen",
                 "core:event:allow-unlisten",
                 "core:window:allow-start-dragging",
-                "core:window:allow-internal-toggle-maximize"
+                "core:window:allow-internal-toggle-maximize",
+                // Esc closes the window
+                "core:window:allow-close"
             ])
         );
     }

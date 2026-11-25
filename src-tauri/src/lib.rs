@@ -188,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn settings_capability_grants_log_listen_size_and_drag() {
+    fn settings_capability_grants_log_listen_size_drag_and_close() {
         let cap: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/settings.json")).unwrap();
         assert_eq!(cap["windows"], serde_json::json!(["settings"]));
@@ -201,7 +201,9 @@ mod tests {
                 "core:window:allow-set-size",
                 "core:window:allow-start-dragging",
                 // a double-click on the title strip; a no-op, the window is not maximizable
-                "core:window:allow-internal-toggle-maximize"
+                "core:window:allow-internal-toggle-maximize",
+                // Esc closes the window
+                "core:window:allow-close"
             ])
         );
     }

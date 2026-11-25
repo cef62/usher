@@ -35,3 +35,10 @@ export const settingsApi = {
   fit: (contentHeight: number) => getCurrentWindow().setSize(new LogicalSize(SETTINGS_WIDTH, contentHeight)),
   revealLog: () => invoke<void>("reveal_log"),
 };
+
+/** Esc closes the window, unless something on the page handled the key first (an open menu, a dialog). */
+export function closeOnEscape(win: { close(): Promise<void> } = getCurrentWindow()) {
+  const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !e.repeat && !e.defaultPrevented) void win.close(); };
+  window.addEventListener("keydown", onKey);
+  return () => window.removeEventListener("keydown", onKey);
+}

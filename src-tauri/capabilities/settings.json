@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "settings",
-  "description": "Settings window: forwards its console to the log, listens for state-changed, sets its own height, drags by its title strip. Its custom commands are guarded in commands.rs.",
+  "description": "Settings window: forwards its console to the log, listens for state-changed, sets its own height, drags by its title strip, closes itself on Esc. Its custom commands are guarded in commands.rs.",
   "windows": ["settings"],
-  "permissions": ["log:default", "core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-set-size", "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize"]
+  "permissions": ["log:default", "core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-set-size", "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize", "core:window:allow-close"]
 }
