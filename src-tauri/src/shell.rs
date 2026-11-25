@@ -63,6 +63,10 @@ pub struct TauriShell(AppHandle);
 
 impl Shell for TauriShell {
     fn state_changed(&self, view: &PanelView) {
+        tray::set_mic_muted(
+            &self.0,
+            view.levels.input.and_then(|l| l.muted) == Some(true),
+        );
         publish(&self.0, view.clone());
     }
 
