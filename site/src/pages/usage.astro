@@ -6,6 +6,7 @@ import Shot from '../components/Shot.astro';
 const toc = [
   ['install', 'Install'],
   ['panel', 'The panel'],
+  ['volume', 'Volume and mute'],
   ['rank', 'Rank devices'],
   ['auto-switch', 'Auto-switch'],
   ['never-use', 'Never use and Forget'],
@@ -62,7 +63,7 @@ const keys = [
           <li>Click outside the panel, press <kbd>Esc</kbd>, or click the icon again to close it.</li>
           <li>Right-click the icon for a menu with <strong>Auto-switch</strong>, <strong>Activity…</strong>, <strong>Settings…</strong>, <strong>Check for Updates…</strong> and <strong>Quit usher</strong>.</li>
         </ul>
-        <Shot name="panel" alt="The usher panel: the Auto-switch switch, an Output list of five devices and an Input list of four, then Activity…, Settings… and Quit." caption="The panel." narrow />
+        <Shot name="panel" alt="The usher panel: the Auto-switch switch, an Output and an Input volume strip, an Output list of five devices and an Input list of four, then Activity…, Settings… and Quit." caption="The panel." narrow />
         <p>The panel has two lists, <strong>Output</strong> and <strong>Input</strong>. A device that has both, such as a headset, shows in both, with its own rank in each. Each row shows:</p>
         <ul>
           <li>its rank number;</li>
@@ -74,6 +75,19 @@ const keys = [
         </ul>
         <p>The footer has <strong>Activity…</strong>, <strong>Settings…</strong> and <strong>Quit</strong>. It also shows a <strong>Debug</strong> tag while Debug logging is on, and <strong>Update to usher X…</strong> when an update waits.</p>
         <p>New devices go to the bottom of the list. On first launch, usher puts the device macOS uses now at the top, so it never switches your audio just because it started.</p>
+      </section>
+
+      <section id="volume">
+        <h2>Volume and mute</h2>
+        <p>Under the Auto-switch header, the panel shows one strip for the active output and one for the active input.</p>
+        <ul>
+          <li>Each strip has a volume slider from 0 to 100 and a <strong>Mute</strong> button. A muted device shows the button pressed.</li>
+          <li>The strips follow the volume keys, Control Center and System Settings while the panel is open.</li>
+          <li>A device with no volume control, such as an HDMI display or a fixed-volume DAC, shows a disabled slider and <strong>No volume control</strong>. A device with no mute control has no <strong>Mute</strong> button.</li>
+          <li>Volume and mute never change which device is active. If the active device changes while you drag, the rest of the drag is dropped and the new device keeps its volume.</li>
+          <li>While the active input is muted, the menu-bar icon has a dot, and its tooltip reads “usher: microphone muted” (“usher: auto-switch off, microphone muted” when Auto-switch is off).</li>
+          <li>If macOS refuses a change, the strip shows “Couldn't set volume: …” (or mute) until the next change works.</li>
+        </ul>
       </section>
 
       <section id="rank">

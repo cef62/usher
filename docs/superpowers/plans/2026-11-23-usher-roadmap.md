@@ -21,7 +21,7 @@ Spec: `docs/superpowers/specs/2026-11-24-usher-v2-design.md`. Scope: ADR 0011.
 | # | Milestone | Plan | Deliverable | Depends on |
 |---|---|---|---|---|
 | M6 | Activity | `2026-11-24-usher-m6-activity.md` | A notification when usher switches a device (on by default, with a setting), a session history in the Activity window, and diagnostics with Copy diagnostics, redacted for a public issue. Ships as 0.2.0. | v1 |
-| M7 | Volume and mute | to plan | Volume slider and mute for the active output and input in the panel, and a dot on the menu-bar icon while the input is muted. | M6 |
+| M7 | Volume and mute | `2026-11-25-usher-m7-volume.md` | Volume slider and mute for the active output and input in the panel, and a dot on the menu-bar icon while the input is muted. | M6 |
 | M8 | Bluetooth | to plan | Battery level of connected Bluetooth audio devices, and Connect and Disconnect for remembered ones. | M6 |
 
 ## Shared conventions (all plans)
