@@ -1,5 +1,11 @@
 # usher
 
+## 0.2.0
+
+### Minor Changes
+
+- 09fe4ff: Added a notification when usher switches your output or input device (on by default, with a setting to turn it off), an Activity window with this session's history, and diagnostics you can copy into a public bug report.
+
 ## 0.1.3
 
 ### Patch Changes
