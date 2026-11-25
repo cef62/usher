@@ -6,7 +6,7 @@ const key = (init: KeyboardEventInit) => window.dispatchEvent(new KeyboardEvent(
 
 test("Esc closes the window, but not a repeat, another key or a handled Esc", () => {
   const close = vi.fn(() => Promise.resolve());
-  const off = closeOnEscape({ close });
+  const off = closeOnEscape(close);
   key({ key: "Enter" });
   key({ key: "Escape", repeat: true });
   const handled = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });

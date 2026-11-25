@@ -87,14 +87,6 @@ pub async fn whatsnew_install(app: AppHandle, version: String) -> Result<(), Str
     update::install::install(&app, &version).await
 }
 
-/// Esc or Later. Closes this window only.
-#[tauri::command]
-pub fn whatsnew_close(app: AppHandle) {
-    if let Some(w) = app.get_webview_window(LABEL) {
-        w.close().ok();
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

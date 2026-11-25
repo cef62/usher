@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "activity",
-  "description": "Activity window: forwards its console to the log, listens for activity events, drags by its title strip and closes itself on Esc. Its custom commands are guarded in commands.rs.",
+  "description": "Activity window: forwards its console to the log, listens for activity events and drags by its title strip. Its custom commands are guarded in commands.rs.",
   "windows": ["activity"],
-  "permissions": ["log:default", "core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize", "core:window:allow-close"]
+  "permissions": ["log:default", "core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize"]
 }

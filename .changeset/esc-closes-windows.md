@@ -2,4 +2,4 @@
 "usher": patch
 ---
 
-Pressing Esc now closes the Settings and Activity windows.
+Made Esc close the Settings and Activity windows.
