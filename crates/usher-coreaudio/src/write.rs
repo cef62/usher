@@ -26,7 +26,7 @@ pub(crate) fn found(id: u32, key: &DeviceKey) -> Result<u32, AudioError> {
     }
 }
 
-fn translate(key: &DeviceKey) -> Result<u32, AudioError> {
+pub(crate) fn translate(key: &DeviceKey) -> Result<u32, AudioError> {
     let uid = CFString::from_str(key.as_str());
     let qualifier: *const CFString = &*uid;
     let mut a = AudioObjectPropertyAddress {

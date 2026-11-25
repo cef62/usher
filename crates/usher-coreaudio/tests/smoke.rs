@@ -58,3 +58,15 @@ fn set_default_after_rebind_is_ok() {
     let cur = current_output(&sys);
     assert_eq!(sys.set_default(Role::Output, &cur), Ok(()));
 }
+
+#[test]
+#[ignore = "needs real audio hardware"]
+fn reads_levels_of_the_current_output() {
+    let sys = CoreAudioSystem::new();
+    let cur = current_output(&sys);
+    assert_eq!(sys.default_key(Role::Output), Ok(Some(cur.clone())));
+    let level = sys.levels(Role::Output, &cur).unwrap();
+    if let Some(v) = level.volume {
+        assert!((0.0..=1.0).contains(&v));
+    }
+}

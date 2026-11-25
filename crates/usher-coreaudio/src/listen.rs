@@ -16,11 +16,11 @@ use usher_core::Role;
 
 use crate::{AudioError, AudioEvent, Notify, check};
 
-type Listener = RcBlock<dyn Fn(u32, NonNull<AudioObjectPropertyAddress>)>;
+pub(crate) type Listener = RcBlock<dyn Fn(u32, NonNull<AudioObjectPropertyAddress>)>;
 
 /// block2 has no `Send + Sync` block type, so the bound lives here: CoreAudio calls the
 /// block on its own thread, and `f` must be safe to call there.
-fn listener(f: impl Fn() + Send + Sync + 'static) -> Listener {
+pub(crate) fn listener(f: impl Fn() + Send + Sync + 'static) -> Listener {
     RcBlock::new(move |_n: u32, _a: NonNull<AudioObjectPropertyAddress>| f())
 }
 
@@ -135,6 +135,10 @@ impl Listeners {
                 log::warn!("AudioObjectRemovePropertyListenerBlock failed (OSStatus {st})");
             }
         }
+    }
+
+    pub(crate) fn notify(&self) -> Option<&Notify> {
+        self.notify.as_ref()
     }
 
     pub(crate) fn rebind(&mut self) -> Result<(), AudioError> {

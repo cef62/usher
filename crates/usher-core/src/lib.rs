@@ -16,6 +16,7 @@ mod desired;
 mod diagnostics;
 mod guard;
 pub mod identity;
+mod level;
 mod model;
 mod panel;
 mod reason;
@@ -32,6 +33,7 @@ pub use guard::*;
 pub use identity::Merge;
 #[doc(hidden)]
 pub use identity::merge_aliases;
+pub use level::*;
 pub use model::*;
 pub use panel::*;
 pub use reason::*;

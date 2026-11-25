@@ -4,14 +4,15 @@ use std::mem::{MaybeUninit, size_of};
 use std::ptr::NonNull;
 
 use objc2_core_audio::{
-    AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectPropertyAddress,
-    AudioObjectSetPropertyData, kAudioDevicePropertyStreams, kAudioObjectPropertyElementMain,
+    AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectHasProperty,
+    AudioObjectIsPropertySettable, AudioObjectPropertyAddress, AudioObjectSetPropertyData,
+    kAudioDevicePropertyStreams, kAudioObjectPropertyElementMain,
 };
 use objc2_core_foundation::{CFRetained, CFString};
 
 use crate::{AudioError, check};
 
-fn addr(selector: u32, scope: u32) -> AudioObjectPropertyAddress {
+pub(crate) fn addr(selector: u32, scope: u32) -> AudioObjectPropertyAddress {
     AudioObjectPropertyAddress {
         mSelector: selector,
         mScope: scope,
@@ -101,8 +102,13 @@ pub(crate) fn stream_count(id: u32, scope: u32) -> Result<u32, AudioError> {
     Ok(size(id, &mut a)? / size_of::<u32>() as u32)
 }
 
-pub(crate) fn set_u32(id: u32, selector: u32, value: u32) -> Result<(), AudioError> {
-    let mut a = addr(selector, objc2_core_audio::kAudioObjectPropertyScopeGlobal);
+pub(crate) fn get_f32(id: u32, selector: u32, scope: u32) -> Result<f32, AudioError> {
+    get(id, selector, scope)
+}
+
+/// Write a fixed-size `T`.
+fn set<T: Copy>(id: u32, selector: u32, scope: u32, value: T) -> Result<(), AudioError> {
+    let mut a = addr(selector, scope);
     let mut v = value;
     // SAFETY: `a` and `v` are live stack values; the size passed is that of `v`.
     let st = unsafe {
@@ -111,9 +117,43 @@ pub(crate) fn set_u32(id: u32, selector: u32, value: u32) -> Result<(), AudioErr
             NonNull::from(&mut a),
             0,
             std::ptr::null(),
-            size_of::<u32>() as u32,
+            size_of::<T>() as u32,
             NonNull::from(&mut v).cast::<c_void>(),
         )
     };
     check("AudioObjectSetPropertyData", st)
+}
+
+pub(crate) fn set_u32(id: u32, selector: u32, value: u32) -> Result<(), AudioError> {
+    set(
+        id,
+        selector,
+        objc2_core_audio::kAudioObjectPropertyScopeGlobal,
+        value,
+    )
+}
+
+pub(crate) fn set_u32_in(id: u32, selector: u32, scope: u32, value: u32) -> Result<(), AudioError> {
+    set(id, selector, scope, value)
+}
+
+pub(crate) fn set_f32(id: u32, selector: u32, scope: u32, value: f32) -> Result<(), AudioError> {
+    set(id, selector, scope, value)
+}
+
+pub(crate) fn has(id: u32, selector: u32, scope: u32) -> bool {
+    let mut a = addr(selector, scope);
+    // SAFETY: `a` is a live stack address.
+    unsafe { AudioObjectHasProperty(id, NonNull::from(&mut a)) }
+}
+
+/// Present and settable; a failed query counts as not settable.
+pub(crate) fn settable(id: u32, selector: u32, scope: u32) -> bool {
+    let mut a = addr(selector, scope);
+    let mut yes = 0u8;
+    // SAFETY: `a` and `yes` are live stack values; CoreAudio writes one `Boolean` byte.
+    let st = unsafe {
+        AudioObjectIsPropertySettable(id, NonNull::from(&mut a), NonNull::from(&mut yes))
+    };
+    st == 0 && yes != 0
 }

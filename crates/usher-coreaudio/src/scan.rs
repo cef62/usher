@@ -67,7 +67,10 @@ fn default_key(
         .ok()
 }
 
-fn default_uid(selector: u32, known: &[(u32, DeviceKey)]) -> Result<Option<DeviceKey>, AudioError> {
+pub(crate) fn default_uid(
+    selector: u32,
+    known: &[(u32, DeviceKey)],
+) -> Result<Option<DeviceKey>, AudioError> {
     Ok(default_key(
         get_u32(SYSTEM, selector, GLOBAL)?,
         known,

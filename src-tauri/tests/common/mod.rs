@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use usher_core::{
-    Command, DeviceKey, DeviceSnapshot, Entry, PausedReason, PerRole, Role, Snapshot, State,
-    Timestamp, Transport, from_json, to_json,
+    Command, DeviceKey, DeviceSnapshot, Entry, Level, LevelRequest, PausedReason, PerRole, Role,
+    Snapshot, State, Timestamp, Transport, from_json, to_json,
 };
 use usher_coreaudio::{AudioError, AudioSystem, Notify, Scan};
 use usher_lib::engine::{Clock, Engine, Event, PanelView, Refusal, Shell};
@@ -27,6 +27,11 @@ pub struct World {
     pub sets: Vec<(Role, DeviceKey)>,
     pub rebinds: u32,
     pub subscribed: bool,
+    pub levels: BTreeMap<DeviceKey, Level>,
+    pub level_writes: Vec<LevelRequest>,
+    pub fail_level: Option<AudioError>,
+    pub fail_default_read: bool,
+    pub watches: Vec<(Role, Option<DeviceKey>)>,
 }
 
 #[derive(Clone, Default)]
@@ -103,6 +108,66 @@ impl AudioSystem for Fake {
         let mut w = self.world();
         w.rebinds += 1;
         failing(&mut w.fail_rebind, "rebind")
+    }
+
+    fn levels(&self, _role: Role, key: &DeviceKey) -> Result<Level, AudioError> {
+        let w = self.world();
+        w.levels
+            .get(key)
+            .copied()
+            .ok_or_else(|| AudioError::NotFound(key.clone()))
+    }
+
+    fn default_key(&self, role: Role) -> Result<Option<DeviceKey>, AudioError> {
+        let w = self.world();
+        if w.fail_default_read {
+            return Err(AudioError::Status {
+                call: "default_key",
+                status: -1,
+            });
+        }
+        Ok(w.current.get(role).clone())
+    }
+
+    fn set_volume(&self, role: Role, key: &DeviceKey, value: f32) -> Result<(), AudioError> {
+        let mut w = self.world();
+        w.level_writes.push(LevelRequest::Volume {
+            role,
+            key: key.clone(),
+            value,
+        });
+        if let Some(e) = w.fail_level.clone() {
+            return Err(e);
+        }
+        let l = w
+            .levels
+            .get_mut(key)
+            .ok_or_else(|| AudioError::NotFound(key.clone()))?;
+        l.volume = Some(value);
+        Ok(())
+    }
+
+    fn set_mute(&self, role: Role, key: &DeviceKey, on: bool) -> Result<(), AudioError> {
+        let mut w = self.world();
+        w.level_writes.push(LevelRequest::Mute {
+            role,
+            key: key.clone(),
+            on,
+        });
+        if let Some(e) = w.fail_level.clone() {
+            return Err(e);
+        }
+        let l = w
+            .levels
+            .get_mut(key)
+            .ok_or_else(|| AudioError::NotFound(key.clone()))?;
+        l.muted = Some(on);
+        Ok(())
+    }
+
+    fn watch_levels(&mut self, role: Role, key: Option<&DeviceKey>) -> Result<(), AudioError> {
+        self.world().watches.push((role, key.cloned()));
+        Ok(())
     }
 }
 
