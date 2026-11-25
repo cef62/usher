@@ -80,6 +80,9 @@ footer button:hover { background: var(--bg-hover); }
 .strip input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--sep) var(--fill, 0%)); }
 .strip input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: #fff; border: 0.5px solid var(--sep); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
 .strip input[type="range"]:disabled { opacity: 0.4; }
+/* keyboard focus: a soft halo on the thumb instead of the panel's box outline */
+:root[data-kbd] .strip input[type="range"]:focus-visible { outline: none; }
+:root[data-kbd] .strip input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--accent); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 .strip-none { color: var(--fg-dim); font-size: 11px; white-space: nowrap; }
 .mute { flex: none; padding: 2px 8px; border: 1px solid var(--sep); border-radius: 5px; font-size: 12px; }
 .mute[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
