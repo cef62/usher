@@ -48,3 +48,9 @@ Run these on a real Mac with the checks below. Start usher with `USHER_LOG=debug
 | 41 | **Footer at 360 pt.** Turn Debug logging on and have an update pending. Open the panel. | The footer shows Debug, `Update to usher <version>…`, `Activity…`, `Settings…` and `Quit` in one row, or in a clean wrap, with nothing clipped. |
 | 42 | **Activity window.** Open it from the panel footer, the right-click menu (`Activity…`) and Settings › Troubleshooting (`Open Activity…`). | Each opens the same single window. New lines appear while it is open. It drags and resizes, and shows Liquid Glass in light and dark mode. |
 | 43 | **Quiet period.** Log in (or relaunch usher) with a slow Thunderbolt display or Bluetooth headset connecting. | No notification in the first 10 seconds. The Activity window has the entry. A change after 10 seconds notifies as usual. |
+| 44 | **Volume keys.** Press the volume keys with the panel open. | The output slider follows. |
+| 45 | **Drag the slider.** Drag the output slider. | The volume in Control Center follows, and the final value sticks. Focus the slider and press the arrow keys: the volume moves one step per press. |
+| 46 | **Mute.** Mute and unmute the output and the input from the panel. | Control Center agrees. |
+| 47 | **Mic dot.** Mute the input. | The menu-bar dot appears, and the tooltip reads `usher: microphone muted`. Unmuting it in Audio MIDI Setup or from the panel removes it. |
+| 48 | **No volume control.** Use a device with no volume control (HDMI display or a fixed-volume DAC). | A disabled slider with `No volume control`. |
+| 49 | **Device change and restart.** Unplug the active headset while dragging, then run `sudo killall coreaudiod` and press the volume keys. | The new device's volume is untouched; after the restart the slider still follows the keys. |

@@ -10,14 +10,29 @@ use crate::engine::{EngineHandle, Event};
 /// The auto-switch value the engine last reported; the tray falls back to it when the engine is gone.
 pub struct LastAuto(pub AtomicBool);
 
+/// Whether the active input is muted; the tray draws a dot while it is.
+pub struct MicMuted(pub AtomicBool);
+
 const ICON_ON: &[u8] = include_bytes!("../icons/tray-template.png");
 const ICON_OFF: &[u8] = include_bytes!("../icons/tray-off-template.png");
+const ICON_ON_MUTED: &[u8] = include_bytes!("../icons/tray-muted-template.png");
+const ICON_OFF_MUTED: &[u8] = include_bytes!("../icons/tray-off-muted-template.png");
 
-pub fn tooltip(on: bool) -> &'static str {
-    if on {
-        "usher"
-    } else {
-        "usher: auto-switch off"
+pub fn icon(auto: bool, muted: bool) -> &'static [u8] {
+    match (auto, muted) {
+        (true, false) => ICON_ON,
+        (false, false) => ICON_OFF,
+        (true, true) => ICON_ON_MUTED,
+        (false, true) => ICON_OFF_MUTED,
+    }
+}
+
+pub fn tooltip(auto: bool, muted: bool) -> &'static str {
+    match (auto, muted) {
+        (true, false) => "usher",
+        (false, false) => "usher: auto-switch off",
+        (true, true) => "usher: microphone muted",
+        (false, true) => "usher: auto-switch off, microphone muted",
     }
 }
 
@@ -54,8 +69,9 @@ fn build_menu(
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let (menu, auto, updates) = build_menu(app)?;
     app.manage(LastAuto(AtomicBool::new(true)));
+    app.manage(MicMuted(AtomicBool::new(false)));
     tauri::tray::TrayIconBuilder::with_id("main")
-        .tooltip(tooltip(true))
+        .tooltip(tooltip(true, false))
         // a black glyph the menu bar tints for light and dark (icons/tray-template.svg is the source)
         .icon(tauri::image::Image::from_bytes(ICON_ON)?)
         .icon_as_template(true)
@@ -99,15 +115,35 @@ fn on_menu(app: &AppHandle, id: &str) {
     }
 }
 
-/// Icon, check mark and tooltip follow the engine's value (muda already flipped the check on click). Runs on the
-/// main thread without waiting: the tray setters block on it, and the main thread may be waiting on the engine
-/// in `RunEvent::Exit`.
+/// Icon, check mark and tooltip follow the engine's value (muda already flipped the check on click).
 pub fn set_auto(app: &AppHandle, on: bool) {
     if let Some(last) = app.try_state::<LastAuto>() {
         last.0.store(on, Ordering::Relaxed);
     }
+    redraw(app);
+}
+
+/// Dot on the icon while the active input is muted; does nothing unless the bit flips.
+pub fn set_mic_muted(app: &AppHandle, muted: bool) {
+    if let Some(m) = app.try_state::<MicMuted>()
+        && m.0.swap(muted, Ordering::Relaxed) != muted
+    {
+        redraw(app);
+    }
+}
+
+/// Runs on the main thread without waiting: the tray setters block on it, and the main thread may be waiting on
+/// the engine in `RunEvent::Exit`. Reads both bits when it runs, so an auto toggle keeps the dot and a mute
+/// change keeps the off glyph.
+fn redraw(app: &AppHandle) {
     let handle = app.clone();
     let queued = app.run_on_main_thread(move || {
+        let on = handle
+            .try_state::<LastAuto>()
+            .is_none_or(|s| s.0.load(Ordering::Relaxed));
+        let muted = handle
+            .try_state::<MicMuted>()
+            .is_some_and(|s| s.0.load(Ordering::Relaxed));
         if let Some(item) = handle.try_state::<CheckMenuItem<tauri::Wry>>()
             && let Err(e) = item.set_checked(on)
         {
@@ -116,8 +152,7 @@ pub fn set_auto(app: &AppHandle, on: bool) {
         let Some(tray) = handle.tray_by_id("main") else {
             return;
         };
-        let bytes = if on { ICON_ON } else { ICON_OFF };
-        match tauri::image::Image::from_bytes(bytes) {
+        match tauri::image::Image::from_bytes(icon(on, muted)) {
             Ok(img) => {
                 if let Err(e) = tray.set_icon(Some(img)) {
                     warn!("tray icon not set ({e})");
@@ -129,7 +164,7 @@ pub fn set_auto(app: &AppHandle, on: bool) {
             }
             Err(e) => warn!("tray glyph did not decode ({e})"),
         }
-        if let Err(e) = tray.set_tooltip(Some(tooltip(on))) {
+        if let Err(e) = tray.set_tooltip(Some(tooltip(on, muted))) {
             warn!("tray tooltip not set ({e})");
         }
     });
@@ -141,16 +176,30 @@ pub fn set_auto(app: &AppHandle, on: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    const PAIRS: [(bool, bool); 4] = [(true, false), (false, false), (true, true), (false, true)];
     #[test]
-    fn both_tray_glyphs_are_44x36() {
-        for bytes in [ICON_ON, ICON_OFF] {
-            let i = tauri::image::Image::from_bytes(bytes).unwrap();
+    fn all_four_tray_glyphs_are_44x36() {
+        for (a, m) in PAIRS {
+            let i = tauri::image::Image::from_bytes(icon(a, m)).unwrap();
             assert_eq!((i.width(), i.height()), (44, 36));
         }
     }
     #[test]
-    fn tooltip_says_when_auto_switch_is_off() {
-        assert_eq!(tooltip(true), "usher");
-        assert_eq!(tooltip(false), "usher: auto-switch off");
+    fn tooltip_names_each_state() {
+        assert_eq!(tooltip(true, false), "usher");
+        assert_eq!(tooltip(false, false), "usher: auto-switch off");
+        assert_eq!(tooltip(true, true), "usher: microphone muted");
+        assert_eq!(
+            tooltip(false, true),
+            "usher: auto-switch off, microphone muted"
+        );
+    }
+    #[test]
+    fn each_state_has_its_own_glyph() {
+        for (i, a) in PAIRS.iter().enumerate() {
+            for b in &PAIRS[i + 1..] {
+                assert_ne!(icon(a.0, a.1), icon(b.0, b.1));
+            }
+        }
     }
 }

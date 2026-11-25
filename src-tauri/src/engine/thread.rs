@@ -8,7 +8,7 @@ use log::debug;
 use usher_coreaudio::{AudioSystem, Notify};
 
 use super::{Engine, Event, Flow, Refusal, Shell};
-use usher_core::{Command, Diagnostics};
+use usher_core::{Command, Diagnostics, LevelRequest};
 
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -39,8 +39,21 @@ impl EngineHandle {
 
     /// Send a command and wait up to `timeout` for the engine's verdict.
     pub fn request(&self, cmd: Command, timeout: Duration) -> Result<(), Refusal> {
+        self.ask(|tx| Event::Command(cmd, Some(tx)), timeout)
+    }
+
+    /// Send a volume or mute write and wait up to `timeout` for the engine's verdict.
+    pub fn level(&self, req: LevelRequest, timeout: Duration) -> Result<(), Refusal> {
+        self.ask(|tx| Event::Level(req, Some(tx)), timeout)
+    }
+
+    fn ask(
+        &self,
+        ev: impl FnOnce(Sender<Result<(), Refusal>>) -> Event,
+        timeout: Duration,
+    ) -> Result<(), Refusal> {
         let (tx, rx) = mpsc::channel();
-        if !self.send(Event::Command(cmd, Some(tx))) {
+        if !self.send(ev(tx)) {
             return Err(Refusal::Gone);
         }
         match rx.recv_timeout(timeout) {

@@ -1,14 +1,15 @@
-import type { Command, View } from "../types";
+import type { Command, LevelRequest, View } from "../types";
+import { LevelStrip } from "./LevelStrip";
 import { RoleList } from "./RoleList";
 import { READ_ONLY, pausedText } from "./text";
 
-export type Actions = { send(cmd: Command): Promise<boolean>; hide(): void; openSettings(): void; openWhatsNew(): void; openActivity(): void; quit(): void };
-type Props = { view: View | null; error: string | null; now: number; actions: Actions };
+export type Actions = { send(cmd: Command): Promise<boolean>; setLevel(req: LevelRequest): Promise<void>; hide(): void; openSettings(): void; openWhatsNew(): void; openActivity(): void; quit(): void };
+type Props = { view: View | null; error: string | null; now: number; actions: Actions; shown?: number };
 
 // React's types lack the `switch` attribute
 const SWITCH = { switch: "" } as object;
 
-export function PanelView({ view, error, now, actions }: Props) {
+export function PanelView({ view, error, now, actions, shown = 0 }: Props) {
   const footer = (
     <footer>
       {view?.debug && <span className="badge badge-debug">Debug</span>}
@@ -35,6 +36,10 @@ export function PanelView({ view, error, now, actions }: Props) {
       </header>
       {view.paused && <p role="status" className="notice">{pausedText(view.paused)}</p>}
       {view.readOnly && <p role="status" className="notice">{READ_ONLY}</p>}
+      {(["output", "input"] as const).map((role) => {
+        const active = view[role].find((r) => r.active);
+        return active && <LevelStrip key={`${role}${shown}`} role={role} row={active} level={view.levels[role]} error={view.levelErrors[role]} setLevel={actions.setLevel} />;
+      })}
       {(["output", "input"] as const).map((role) => (
         <section key={role}>
           <h2>{role === "output" ? "Output" : "Input"}</h2>

@@ -41,3 +41,4 @@ What gets easier, what gets harder, what we must now do.
 | [0009](0009-reconcile-waits-for-usb-verdicts.md) | Reconcile waits for unresolved USB verdicts (amends 0006) | Accepted |
 | [0010](0010-docs-site.md) | A docs site on GitHub Pages (departs from the v1 non-goal) | Accepted |
 | [0011](0011-v2-scope.md) | v2 scope: notices, history and diagnostics now; volume, mute and Bluetooth later | Accepted |
+| [0013](0013-level-listeners.md) | Level listeners on the default device (amends 0006) | Accepted |

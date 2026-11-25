@@ -50,9 +50,9 @@ because there is one owner and nothing async to wait on.
 
 **Listeners.** Blocks with a `None` queue, so CoreAudio calls them on its own thread. There are
 four listeners, all on the system object: devices, default output, default input and
-`ServiceRestarted`. A generation counter (an `AtomicU64`) is bumped before the listeners are
+`ServiceRestarted` (amended by [0013](0013-level-listeners.md): the level watch adds more). A generation counter (an `AtomicU64`) is bumped before the listeners are
 removed. A callback still in flight from an older registration sees a stale generation and is
-dropped. No `AudioObjectID` outlives one call: the UID is translated again on every write. The
+dropped. No `AudioObjectID` outlives one call (amended by [0013](0013-level-listeners.md): the level watch is the one exception): the UID is translated again on every write. The
 C-proc variant is rejected because of its context pointer.
 
 **IOKit.** `objc2-io-kit` 0.3.2. Each scan walks every `IOUSBHostDevice` once, and only when a USB

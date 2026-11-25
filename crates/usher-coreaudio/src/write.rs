@@ -16,6 +16,7 @@ use crate::props::set_u32;
 use crate::{AudioError, check};
 
 const SYSTEM: u32 = kAudioObjectSystemObject as u32;
+const GLOBAL: u32 = kAudioObjectPropertyScopeGlobal;
 
 /// `kAudioObjectUnknown` (0) means CoreAudio has no device for the UID.
 pub(crate) fn found(id: u32, key: &DeviceKey) -> Result<u32, AudioError> {
@@ -26,7 +27,7 @@ pub(crate) fn found(id: u32, key: &DeviceKey) -> Result<u32, AudioError> {
     }
 }
 
-fn translate(key: &DeviceKey) -> Result<u32, AudioError> {
+pub(crate) fn translate(key: &DeviceKey) -> Result<u32, AudioError> {
     let uid = CFString::from_str(key.as_str());
     let qualifier: *const CFString = &*uid;
     let mut a = AudioObjectPropertyAddress {
@@ -60,9 +61,14 @@ pub(crate) fn set_default(role: Role, key: &DeviceKey) -> Result<(), AudioError>
         Role::Output => kAudioHardwarePropertyDefaultOutputDevice,
         Role::Input => kAudioHardwarePropertyDefaultInputDevice,
     };
-    set_u32(SYSTEM, main, id)?;
+    set_u32(SYSTEM, main, GLOBAL, id)?;
     if role == Role::Output
-        && let Err(e) = set_u32(SYSTEM, kAudioHardwarePropertyDefaultSystemOutputDevice, id)
+        && let Err(e) = set_u32(
+            SYSTEM,
+            kAudioHardwarePropertyDefaultSystemOutputDevice,
+            GLOBAL,
+            id,
+        )
     {
         log::warn!("system output not moved to {key}: {e}");
     }

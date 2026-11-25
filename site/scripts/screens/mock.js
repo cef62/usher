@@ -24,6 +24,8 @@
     debug: false,
     paused: paused ? { role: 'output', key: 'airpods', name: 'AirPods Pro' } : null,
     output, input, errors: { output: null, input: null }, readOnly: false,
+    levels: { output: { volume: 0.69, muted: false }, input: { volume: 0.45, muted: true } },
+    levelErrors: { output: null, input: null },
     update: paused ? '0.1.3' : null,
     notifySwitches: true,
   };

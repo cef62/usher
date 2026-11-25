@@ -19,6 +19,8 @@ pub enum Refusal {
     Rebinding,
     Gone,
     NoAnswer,
+    /// The request named a device that is no longer the default.
+    Stale,
 }
 
 impl fmt::Display for Refusal {
@@ -33,6 +35,7 @@ impl fmt::Display for Refusal {
             }
             Refusal::Gone => f.write_str("usher's audio engine stopped; quit and reopen usher"),
             Refusal::NoAnswer => f.write_str("usher did not answer in time; try again"),
+            Refusal::Stale => f.write_str("the active device changed; try again"),
         }
     }
 }

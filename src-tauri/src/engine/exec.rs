@@ -56,6 +56,7 @@ impl<A: AudioSystem, S: Shell> Engine<A, S> {
             self.errors = PerRole::default();
         }
         self.snap = Some(snap);
+        self.sync_levels();
         self.emit();
     }
 

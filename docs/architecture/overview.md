@@ -26,7 +26,7 @@ flowchart LR
   end
 
   subgraph app["src-tauri (usher)"]
-    ENG[Engine thread<br/>owns state]
+    ENG[Engine thread<br/>owns state + levels]
     STORE[Store<br/>atomic JSON]
     TRAYW[Tray]
     PW[Panel window]
@@ -42,7 +42,8 @@ flowchart LR
 
   CA -- property events --> LIS
   LIS -- Event via mpsc --> ENG
-  ENG -- enumerate / set default --> SYS
+  LIS -- AudioEvent::LevelChanged --> ENG
+  ENG -- enumerate / set default / levels --> SYS
   SYS --> CA
   SYS --> IOK
   ENG --> POL

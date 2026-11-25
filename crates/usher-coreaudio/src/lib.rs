@@ -4,22 +4,25 @@
 use std::fmt;
 use std::sync::Arc;
 
+mod level;
 mod listen;
 mod props;
 mod scan;
 mod system;
 mod usb;
+mod watch;
 mod write;
 
 pub use system::CoreAudioSystem;
 
-use usher_core::{DeviceKey, Role, Snapshot};
+use usher_core::{DeviceKey, Level, Role, Snapshot};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum AudioEvent {
     DevicesChanged,
     DefaultChanged(Role),
     ServiceRestarted,
+    LevelChanged(Role),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -53,6 +56,12 @@ pub trait AudioSystem {
     fn unsubscribe(&mut self);
     /// unsubscribe, then subscribe again with the last `Notify`
     fn rebind(&mut self) -> Result<(), AudioError>;
+    fn levels(&self, role: Role, key: &DeviceKey) -> Result<Level, AudioError>;
+    fn default_key(&self, role: Role) -> Result<Option<DeviceKey>, AudioError>;
+    fn set_volume(&self, role: Role, key: &DeviceKey, value: f32) -> Result<(), AudioError>;
+    fn set_mute(&self, role: Role, key: &DeviceKey, on: bool) -> Result<(), AudioError>;
+    /// Move this role's level listeners to `key`'s device (`None`: remove them). Same AudioObjectID: no-op.
+    fn watch_levels(&mut self, role: Role, key: Option<&DeviceKey>) -> Result<(), AudioError>;
 }
 
 pub(crate) fn check(call: &'static str, status: i32) -> Result<(), AudioError> {
