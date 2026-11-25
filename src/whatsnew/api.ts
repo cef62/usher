@@ -19,6 +19,6 @@ export function info(onPhase: (p: Phase) => void): Promise<WhatsNewInfo> {
 }
 /** Downloads, verifies and installs `version`, then usher relaunches; rejects only on failure. */
 export const install = (version: string) => invoke<void>("whatsnew_install", { version });
-export const close = () => invoke<void>("whatsnew_close");
+export const close = () => invoke<void>("close_window");
 /** update/mod.rs `NO_UPDATE` and `NEWER`, word for word: the install was refused because the window's update is stale. */
 export const STALE = ["No update to install.", "usher found a newer version since this window opened."];

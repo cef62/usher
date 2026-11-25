@@ -116,7 +116,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             whatsnew::open_whatsnew,
             whatsnew::whatsnew_info,
             whatsnew::whatsnew_install,
-            whatsnew::whatsnew_close
+            commands::close_window
         ]))
 }
 

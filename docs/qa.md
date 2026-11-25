@@ -54,3 +54,4 @@ Run these on a real Mac with the checks below. Start usher with `USHER_LOG=debug
 | 47 | **Mic dot.** Mute the input. | The menu-bar dot appears, and the tooltip reads `usher: microphone muted`. Unmuting it in Audio MIDI Setup or from the panel removes it. |
 | 48 | **No volume control.** Use a device with no volume control (HDMI display or a fixed-volume DAC). | A disabled slider with `No volume control`. |
 | 49 | **Device change and restart.** Unplug the active headset while dragging, then run `sudo killall coreaudiod` and press the volume keys. | The new device's volume is untouched; after the restart the slider still follows the keys. |
+| 50 | **Esc closes Settings and Activity.** Open Settings, press Escape. Open Activity, press Escape. With the panel also open, repeat. | Each press closes only that window. The panel stays open. |

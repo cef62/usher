@@ -28,9 +28,10 @@ pub const SETTINGS_COMMANDS: &[&str] = &[
     "check_update",
     "open_whatsnew",
     "open_activity",
+    "close_window",
 ];
-pub const WHATSNEW_COMMANDS: &[&str] = &["whatsnew_info", "whatsnew_install", "whatsnew_close"];
-pub const ACTIVITY_COMMANDS: &[&str] = &["get_activity", "get_diagnostics"];
+pub const WHATSNEW_COMMANDS: &[&str] = &["whatsnew_info", "whatsnew_install", "close_window"];
+pub const ACTIVITY_COMMANDS: &[&str] = &["get_activity", "get_diagnostics", "close_window"];
 
 /// Custom commands are open to every window (no app ACL manifest in build.rs, so capabilities do not restrict them):
 /// this is the boundary. A command missing from both lists is denied everywhere.
@@ -95,6 +96,12 @@ pub fn open_settings(app: AppHandle) {
     settings::open(&app);
 }
 
+/// Esc in Settings, Activity or What's new: closes the calling window only (no window may close another).
+#[tauri::command]
+pub fn close_window(window: tauri::WebviewWindow) {
+    window.close().ok();
+}
+
 #[tauri::command]
 pub fn quit(app: AppHandle) {
     info!("quit from panel");
@@ -117,9 +124,10 @@ mod tests {
                 assert!(allowed(label, c));
                 for (other, _) in lists {
                     if other != label {
-                        // the open_* commands are shared by the panel and Settings
-                        let shared = (*c == "open_whatsnew" || *c == "open_activity")
-                            && (other == "panel" || other == "settings");
+                        // the open_* commands are shared by the panel and Settings; close_window by every window but the panel
+                        let shared = ((*c == "open_whatsnew" || *c == "open_activity")
+                            && (other == "panel" || other == "settings"))
+                            || (*c == "close_window" && other != "panel");
                         assert_eq!(allowed(other, c), shared, "{other} {c}");
                     }
                 }
@@ -129,6 +137,7 @@ mod tests {
         assert!(!allowed("activity", "get_view") && !allowed("panel", "get_diagnostics"));
         assert!(!allowed("activity", "open_activity") && !allowed("settings", "get_activity"));
         assert!(!allowed("panel", "whatsnew_install") && !allowed("", "quit"));
+        assert!(!allowed("panel", "close_window") && allowed("whatsnew", "close_window"));
         assert!(!allowed("panel", "plugin:log|log"));
         assert!(allowed("panel", "set_level"));
         for other in ["settings", "whatsnew", "activity", ""] {
